@@ -1,0 +1,236 @@
+import { create } from 'zustand';
+import { loadBio, loadBook, loadManifest, loadNarratorIndex, loadText } from '../corpus/loader';
+import type {
+  BookFile,
+  CorpusManifest,
+  HadithRecord,
+  HadithText,
+  NarratorBio,
+  NarratorIndexEntry,
+} from '../corpus/types';
+import { buildGraph, type GraphData } from '../graph/build';
+import type { LayoutResponse } from '../graph/layout.worker';
+
+export interface LayoutResult {
+  positions: Float32Array;
+  radius: number;
+  height: number;
+  spacing: number;
+}
+
+interface State {
+  status: 'loading' | 'ready' | 'error';
+  error?: string;
+  manifest?: CorpusManifest;
+  narrators: Map<string, NarratorIndexEntry>;
+  books: Map<string, BookFile>;
+
+  /** Books whose hadiths are in scope. */
+  activeBooks: Set<string>;
+  /** Chapters to narrow to, per book. Empty means the whole book. */
+  activeChapters: Map<string, Set<number>>;
+  /** Individually chosen hadiths. When non-empty these are the whole graph. */
+  pinned: string[];
+
+  graph?: GraphData;
+  layout?: LayoutResult;
+  laying: boolean;
+
+  focus?: string;
+  hover?: string;
+  bios: Map<string, NarratorBio>;
+  texts: Map<string, HadithText>;
+  reading?: string;
+
+  init: () => Promise<void>;
+  toggleBook: (slug: string) => void;
+  setAllBooks: (on: boolean) => void;
+  toggleChapter: (slug: string, chapterId: number) => void;
+  clearChapters: (slug: string) => void;
+  pin: (hadithId: string) => void;
+  unpin: (hadithId: string) => void;
+  clearPins: () => void;
+  setPins: (ids: string[]) => void;
+  setFocus: (id?: string) => void;
+  setHover: (id?: string) => void;
+  read: (hadithId?: string) => Promise<void>;
+}
+
+let worker: Worker | undefined;
+let layoutToken = 0;
+
+function ensureWorker(): Worker {
+  worker ??= new Worker(new URL('../graph/layout.worker.ts', import.meta.url), {
+    type: 'module',
+  });
+  return worker;
+}
+
+export const useStore = create<State>((set, get) => {
+  /** Rebuild the graph from the current selection and lay it out. */
+  const recompute = () => {
+    const { books, narrators, activeBooks, activeChapters, pinned } = get();
+    if (!books.size) return;
+
+    const selection: { book: BookFile; hadiths: HadithRecord[] }[] = [];
+
+    if (pinned.length) {
+      const wanted = new Set(pinned);
+      for (const book of books.values()) {
+        const hadiths = book.hadiths.filter((h) => wanted.has(h.id));
+        if (hadiths.length) selection.push({ book, hadiths });
+      }
+    } else {
+      for (const slug of activeBooks) {
+        const book = books.get(slug);
+        if (!book) continue;
+        const chapters = activeChapters.get(slug);
+        const hadiths = chapters?.size
+          ? book.hadiths.filter((h) => h.chapterId !== undefined && chapters.has(h.chapterId))
+          : book.hadiths;
+        if (hadiths.length) selection.push({ book, hadiths });
+      }
+    }
+
+    const graph = buildGraph(selection, narrators);
+    set({ graph, laying: true });
+
+    const token = ++layoutToken;
+    const instance = ensureWorker();
+    instance.onmessage = (event: MessageEvent<LayoutResponse>) => {
+      // A slower earlier layout must not overwrite a newer one.
+      if (token !== layoutToken) return;
+      set({ layout: event.data, laying: false });
+    };
+    instance.postMessage({
+      gen: graph.gen,
+      genExact: graph.genExact,
+      weight: graph.weight,
+      edges: graph.edges,
+      edgeWeight: graph.edgeWeight,
+      iterations: graph.ids.length > 6000 ? 140 : 240,
+    });
+  };
+
+  return {
+    status: 'loading',
+    narrators: new Map(),
+    books: new Map(),
+    activeBooks: new Set(),
+    activeChapters: new Map(),
+    pinned: [],
+    bios: new Map(),
+    texts: new Map(),
+    laying: false,
+
+    async init() {
+      try {
+        const [manifest, narrators] = await Promise.all([loadManifest(), loadNarratorIndex()]);
+        const loaded = await Promise.all(manifest.books.map((b) => loadBook(b.slug)));
+        const books = new Map(loaded.map((book) => [book.slug, book]));
+        set({
+          manifest,
+          narrators,
+          books,
+          activeBooks: new Set(books.keys()),
+          status: 'ready',
+        });
+        recompute();
+      } catch (error) {
+        set({
+          status: 'error',
+          error:
+            error instanceof Error
+              ? error.message
+              : 'The corpus could not be loaded. Run `npm run ingest -- --all` to generate it.',
+        });
+      }
+    },
+
+    toggleBook(slug) {
+      const activeBooks = new Set(get().activeBooks);
+      if (activeBooks.has(slug)) activeBooks.delete(slug);
+      else activeBooks.add(slug);
+      set({ activeBooks, pinned: [] });
+      recompute();
+    },
+
+    setAllBooks(on) {
+      set({
+        activeBooks: on ? new Set(get().books.keys()) : new Set(),
+        activeChapters: new Map(),
+        pinned: [],
+      });
+      recompute();
+    },
+
+    toggleChapter(slug, chapterId) {
+      const activeChapters = new Map(get().activeChapters);
+      const chapters = new Set(activeChapters.get(slug) ?? []);
+      if (chapters.has(chapterId)) chapters.delete(chapterId);
+      else chapters.add(chapterId);
+      activeChapters.set(slug, chapters);
+      const activeBooks = new Set(get().activeBooks);
+      if (chapters.size) activeBooks.add(slug);
+      set({ activeChapters, activeBooks, pinned: [] });
+      recompute();
+    },
+
+    clearChapters(slug) {
+      const activeChapters = new Map(get().activeChapters);
+      activeChapters.delete(slug);
+      set({ activeChapters, pinned: [] });
+      recompute();
+    },
+
+    pin(hadithId) {
+      if (get().pinned.includes(hadithId)) return;
+      set({ pinned: [...get().pinned, hadithId] });
+      recompute();
+    },
+
+    unpin(hadithId) {
+      set({ pinned: get().pinned.filter((id) => id !== hadithId) });
+      recompute();
+    },
+
+    clearPins() {
+      set({ pinned: [] });
+      recompute();
+    },
+
+    setPins(ids) {
+      set({ pinned: ids });
+      recompute();
+    },
+
+    setFocus(id) {
+      set({ focus: id });
+      const { manifest, bios } = get();
+      if (!id || !manifest || bios.has(id)) return;
+      void loadBio(id, manifest.bioShards).then((bio) => {
+        if (!bio) return;
+        const next = new Map(get().bios);
+        next.set(id, bio);
+        set({ bios: next });
+      });
+    },
+
+    setHover(id) {
+      if (get().hover !== id) set({ hover: id });
+    },
+
+    async read(hadithId) {
+      set({ reading: hadithId });
+      if (!hadithId || get().texts.has(hadithId)) return;
+      const slug = hadithId.split(':')[0];
+      const book = get().books.get(slug);
+      const record = book?.hadiths.find((h) => h.id === hadithId);
+      if (!book || !record) return;
+      const texts = await loadText(slug, record.t);
+      const next = new Map(get().texts);
+      for (const [id, text] of Object.entries(texts)) next.set(id, text);
+      set({ texts: next });
+    },
+  };
+});
