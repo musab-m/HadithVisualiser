@@ -54,6 +54,13 @@ button {
 .scene {
   position: absolute !important;
   inset: 0;
+  /*
+    The in-scene labels are DOM nodes that drei stacks up to z-index 20, which
+    otherwise puts them over the panels — narrator names printed across the
+    text of the hadith you opened. A stacking context here confines them to
+    the canvas, so every panel below sits above them by document order alone.
+  */
+  z-index: 0;
 }
 
 /* --- boot ---------------------------------------------------------------- */
@@ -865,6 +872,31 @@ button {
   color: var(--gold);
 }
 
+.hadiths__pair {
+  display: flex;
+  align-items: stretch;
+  border: 1px solid var(--edge);
+  border-radius: 5px;
+  overflow: hidden;
+}
+
+.hadiths__pair .hadith-ref {
+  border: none;
+  border-radius: 0;
+}
+
+.reveal {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  margin-top: 0.6rem;
+}
+
+.reveal__left {
+  color: var(--ink-faint);
+  font-size: 0.65rem;
+}
+
 /* --- reader --------------------------------------------------------------- */
 
 .reader {
@@ -883,7 +915,7 @@ button {
   backdrop-filter: blur(20px);
   box-shadow: 0 30px 70px rgba(0, 0, 0, 0.6);
   animation: rise 0.26s cubic-bezier(0.2, 0.8, 0.3, 1);
-  z-index: 5;
+  z-index: 20;
 }
 
 @keyframes rise {
