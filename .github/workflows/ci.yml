@@ -1,0 +1,57 @@
+# Runs on pull requests so `main` has something to gate on.
+#
+# Register this job as a required status check in the branch protection rule,
+# otherwise a rule that only demands review will happily merge code that does
+# not compile.
+name: Checks
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: typecheck and build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      # Covers the app and the ingestion tools, which share the corpus schema —
+      # a change to one that breaks the other fails here rather than at ingest.
+      - name: Typecheck
+        run: npx tsc -b --pretty false
+
+      - name: Build
+        run: npm run build
+
+      # The corpus is committed, so a malformed regeneration would otherwise
+      # only surface in the browser.
+      - name: Check the corpus is loadable
+        run: |
+          node --input-type=module -e '
+            import { readFileSync } from "node:fs";
+            const manifest = JSON.parse(readFileSync("dist/data/manifest.json", "utf8"));
+            if (!manifest.books.length) throw new Error("manifest lists no books");
+            if (!manifest.search) throw new Error("no search index in the manifest");
+            let hadiths = 0;
+            for (const book of manifest.books) {
+              // `dir` is relative to the data root, not the site root.
+              const file = JSON.parse(readFileSync(`dist/data/${book.dir}/index.json`, "utf8"));
+              if (file.hadiths.length !== book.hadithCount) {
+                throw new Error(`${book.slug}: manifest says ${book.hadithCount} hadiths, file has ${file.hadiths.length}`);
+              }
+              hadiths += file.hadiths.length;
+            }
+            console.log(`${manifest.books.length} books, ${hadiths.toLocaleString()} hadiths, ${manifest.narratorCount.toLocaleString()} narrators`);
+          '

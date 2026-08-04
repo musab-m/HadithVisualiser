@@ -75,10 +75,18 @@ npx wrangler pages deploy dist
 ```
 
 **GitHub Pages** is free only for public repositories — a private repository needs
-a paid plan. If this repository is public, enable *Settings → Pages → Source:
-GitHub Actions* and the included `Deploy` workflow publishes on every push to
-`main`. Nothing in the corpus prevents that: every source it is built from is
-open, and the generated data carries no private material.
+a paid plan. Enable *Settings → Pages → Source: GitHub Actions* and the included
+`Deploy` workflow publishes on every push to `main`.
+
+### Contributing
+
+`main` takes changes through pull requests only. `Checks` runs on every pull
+request — typecheck, build, and a validation that the committed corpus still
+matches its manifest — and is the status check `main` requires.
+
+Regenerating `public/data` produces a very large diff by design: the corpus is
+committed so that the site needs no build-time access to the sources. Say in the
+pull request which books were re-ingested and what the counts came out as.
 
 What the site actually costs to serve:
 
