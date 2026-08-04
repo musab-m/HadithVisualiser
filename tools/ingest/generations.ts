@@ -135,8 +135,12 @@ export function assignGenerations(input: GenerationInput): GenerationResult {
   }
 
   for (const [id, t] of tabaqa) {
-    const value = calibration.get(t);
-    if (value == null) continue;
+    // Definitional, not calibrated: ṭabaqa 1 is the Companions, so anyone past
+    // it did not hear from the Prophet and cannot stand in the first
+    // generation however many mursal chains place him there. ʿAlqama ibn
+    // Waqqāṣ is ṭabaqa 2 and a student of ʿUmar; he belongs in the second.
+    const floor = t === 1 ? 1 : 2;
+    const value = Math.max(calibration.get(t) ?? floor, floor);
     const fromChains = gen.get(id);
     if (fromChains == null) {
       gen.set(id, value);

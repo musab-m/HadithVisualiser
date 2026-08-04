@@ -246,6 +246,29 @@ export class RijalDatabase {
     }
   }
 
+  /**
+   * Drop the father from the candidates for `ابن X`.
+   *
+   * This is not a matter of weight. `ابن عمر` denotes ʿUmar's son and cannot
+   * denote ʿUmar, however much of the surrounding chain corroborates the
+   * father — and the father, being the more prominent man, otherwise wins.
+   * Scored as a penalty it was outvoted by two teacher/student records, and
+   * 1,237 of ʿAbd Allāh ibn ʿUmar's narrations were filed under his father.
+   */
+  private excludeFather(ids: number[], key: string): number[] {
+    if (!key.startsWith('ابن ')) return ids;
+    const father = key.slice(4);
+    const kept = ids.filter((id) => {
+      const profile = this.profiles.get(id);
+      if (!profile) return false;
+      const full = normaliseKey(profile.fullNameAr);
+      return full !== father && !full.startsWith(`${father} `);
+    });
+    // If that leaves nobody, the index knows only the father under this name
+    // and refusing every candidate would lose the link altogether.
+    return kept.length ? kept : ids;
+  }
+
   get(id: number): RijalProfile | undefined {
     return this.profiles.get(id);
   }
@@ -281,7 +304,7 @@ export class RijalDatabase {
         const key = run.join(' ');
         for (const variant of kunyaVariants(key)) {
           const ids = this.byName.get(variant);
-          if (ids) return { ids, key: variant };
+          if (ids) return { ids: this.excludeFather(ids, variant), key: variant };
         }
       }
     }
@@ -376,6 +399,15 @@ export class RijalDatabase {
 
     // Index artefacts: a name is not a name if it carries a catalogue number.
     if (/\d/.test(candidate.fullNameAr)) score -= 10;
+
+    // `ابن عمر` is ʿUmar's son, not ʿUmar. Without this the father wins on
+    // prominence every time and the two are merged into one node — which is
+    // how ʿUmar ibn al-Khaṭṭāb came to be labelled Ibn ʿUmar and to carry his
+    // son's chains as well as his own.
+    if (key.startsWith('ابن ')) {
+      const father = key.slice(4);
+      if (fullKey === father || fullKey.startsWith(`${father} `)) score -= 14;
+    }
 
     // A transmitter the sources name many ways, and record with a lineage, is
     // a figure they were interested in — and the likelier referent of a bare
