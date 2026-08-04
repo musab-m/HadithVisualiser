@@ -40,7 +40,7 @@ export function Legend() {
       <div className="legend__axis">
         <span>
           the Prophet ﷺ at the apex · a narrator sits at the shortest distance any chain puts
-          between him and the Prophet · within a generation, the older are above the younger
+          between them and the Prophet · within a generation, the older are above the younger
         </span>
       </div>
       <button className="legend__about" onClick={() => setOpen(!open)}>
@@ -50,11 +50,11 @@ export function Legend() {
         <div className="legend__panel">
           <p>
             Colour is the reliability grade the biographical database files a transmitter
-            under, which is not the same axis as the generation he sits on. A narrator in
+            under, which is not the same axis as the generation they sit on. A narrator in
             the first generation shown in another colour is either one the chains name too
             briefly to identify at all — about a quarter of that layer — or one the
-            literature grades by his reliability rather than filing him among the
-            Companions. Companionship claimed for a man whose own ṭabaqa or death year
+            literature grades by reliability rather than filing among the
+            Companions. Companionship claimed for someone whose own ṭabaqa or death year
             rules it out is not shown: al-Iṣāba catalogues everyone <em>claimed</em> as a
             Companion, including those it rejects.
           </p>

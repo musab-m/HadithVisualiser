@@ -2,8 +2,10 @@ import { useEffect, useState } from 'react';
 import { Scene } from './scene/Scene';
 import { useStore } from './state/store';
 import { HadithReader } from './ui/HadithReader';
+import { Isolation } from './ui/Isolation';
 import { Legend } from './ui/Legend';
 import { NarratorPanel } from './ui/NarratorPanel';
+import { NodeMenu } from './ui/NodeMenu';
 import { Sidebar } from './ui/Sidebar';
 
 export function App() {
@@ -60,9 +62,11 @@ export function App() {
         </button>
       </header>
 
+      <Isolation />
       <Sidebar onNavigate={() => setControls(false)} />
       <NarratorPanel />
       <HadithReader />
+      <NodeMenu />
       <Legend />
       {laying ? <div className="laying">arranging {'…'}</div> : null}
     </div>

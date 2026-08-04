@@ -12,7 +12,14 @@ interface Props {
   focus?: string;
   onHover: (id?: string) => void;
   onSelect: (id: string) => void;
+  onMenu: (id: string, x: number, y: number) => void;
 }
+
+/** How long a finger has to rest on a narrator to mean "give me the menu". */
+const LONG_PRESS_MS = 450;
+
+/** Movement that ends a press — a drag is the viewer turning the graph. */
+const PRESS_SLOP = 10;
 
 const GRADE_COLORS = NARRATOR_GRADES.map((grade) => new THREE.Color(GRADE_COLOR[grade]));
 const DIM = new THREE.Color('#1b2030');
@@ -71,11 +78,26 @@ function glowMaterial(): THREE.ShaderMaterial {
   });
 }
 
-export function Graph({ graph, layout, hover, focus, onHover, onSelect }: Props) {
+export function Graph({ graph, layout, hover, focus, onHover, onSelect, onMenu }: Props) {
   const nodes = useRef<THREE.InstancedMesh>(null);
   const halos = useRef<THREE.InstancedMesh>(null);
   const edgeGeometry = useRef<THREE.BufferGeometry>(null);
   const count = graph.ids.length;
+
+  /** An in-progress long press, and the point the finger went down at. */
+  const press = useRef<{ timer: number; x: number; y: number } | undefined>(undefined);
+  /**
+   * A long press ends with the finger still on the node, so the browser sends
+   * the click anyway. Without this, opening the menu would also open the
+   * biography behind it.
+   */
+  const opened = useRef(false);
+
+  const endPress = () => {
+    if (press.current) clearTimeout(press.current.timer);
+    press.current = undefined;
+  };
+  useEffect(() => endPress, []);
 
   /**
    * three only declares the `instanceColor` attribute in a shader once the
@@ -249,6 +271,37 @@ export function Graph({ graph, layout, hover, focus, onHover, onSelect }: Props)
     event.stopPropagation();
     const id = event.instanceId;
     onHover(id === undefined ? undefined : graph.ids[id]);
+    // Turning the graph is a drag that starts on a node as often as not, so a
+    // press only counts while the finger stays put.
+    const held = press.current;
+    if (held && Math.hypot(event.clientX - held.x, event.clientY - held.y) > PRESS_SLOP) {
+      endPress();
+    }
+  };
+
+  // A right-click on a desktop and a long press on a phone are the same
+  // request: what can I do with this narrator?
+  const handleContextMenu = (event: ThreeEvent<MouseEvent>) => {
+    if (event.instanceId === undefined) return;
+    event.stopPropagation();
+    event.nativeEvent.preventDefault();
+    onMenu(graph.ids[event.instanceId], event.clientX, event.clientY);
+  };
+
+  const handleDown = (event: ThreeEvent<PointerEvent>) => {
+    endPress();
+    if (event.pointerType !== 'touch' || event.instanceId === undefined) return;
+    const id = graph.ids[event.instanceId];
+    const { clientX: x, clientY: y } = event;
+    press.current = {
+      x,
+      y,
+      timer: window.setTimeout(() => {
+        press.current = undefined;
+        opened.current = true;
+        onMenu(id, x, y);
+      }, LONG_PRESS_MS),
+    };
   };
 
   return (
@@ -279,9 +332,21 @@ export function Graph({ graph, layout, hover, focus, onHover, onSelect }: Props)
         args={[undefined, undefined, count]}
         frustumCulled={false}
         onPointerMove={handleMove}
-        onPointerOut={() => onHover(undefined)}
+        onPointerDown={handleDown}
+        onPointerUp={endPress}
+        onPointerCancel={endPress}
+        onContextMenu={handleContextMenu}
+        onPointerOut={() => {
+          endPress();
+          onHover(undefined);
+        }}
         onClick={(event) => {
           event.stopPropagation();
+          if (opened.current) {
+            // The click that follows a long press belongs to the menu.
+            opened.current = false;
+            return;
+          }
           if (event.instanceId !== undefined) onSelect(graph.ids[event.instanceId]);
         }}
       >

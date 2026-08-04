@@ -220,6 +220,8 @@ export function Scene() {
   const focus = useStore((s) => s.focus);
   const setHover = useStore((s) => s.setHover);
   const setFocus = useStore((s) => s.setFocus);
+  const openMenu = useStore((s) => s.openMenu);
+  const closeMenu = useStore((s) => s.closeMenu);
   const controls = useRef<OrbitControlsImpl>(null);
 
   const graph = scene?.graph;
@@ -240,7 +242,13 @@ export function Scene() {
       dpr={[1, 2]}
       gl={{ antialias: true, alpha: true, powerPreference: 'high-performance' }}
       camera={{ fov: 48, position: [0, 30, 150] }}
-      onPointerMissed={() => setFocus(undefined)}
+      onPointerMissed={() => {
+        setFocus(undefined);
+        closeMenu();
+      }}
+      // Right-clicking empty space should not offer to save the canvas as an
+      // image; the menu on a node handles its own.
+      onContextMenu={(event: React.MouseEvent) => event.preventDefault()}
     >
       <ambientLight intensity={0.9} />
       <directionalLight position={[40, 90, 60]} intensity={1.1} />
@@ -258,6 +266,7 @@ export function Scene() {
             focus={focus}
             onHover={setHover}
             onSelect={setFocus}
+            onMenu={openMenu}
           />
           <Labels graph={graph} layout={layout} />
         </>
