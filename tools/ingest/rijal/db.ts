@@ -64,6 +64,51 @@ export interface Resolution {
 
 const IGNORED_VALUES = new Set(['', '-', 'nan', 'null', 'none']);
 
+/**
+ * The last of the Companions died around 110 AH. A margin past that leaves room
+ * for the disputed long-lived cases without admitting the second century.
+ */
+const LAST_COMPANION_AH = 120;
+
+/** Preferred when several works grade a transmitter differently. */
+const GRADE_RANK: NarratorGrade[] = [
+  'reliable',
+  'mostly_reliable',
+  'weak',
+  'abandoned',
+  'fabricator',
+];
+
+/**
+ * Decide whether a profile filed under "companion" really belongs there.
+ *
+ * The merged database takes companionship from an entry in Ibn Ḥajar's
+ * al-Iṣāba, but that work catalogues everyone who was *claimed* as a Companion
+ * — including those it goes on to reject — so the bucket over-collects. Where a
+ * profile's own ṭabaqa or death year contradicts the claim, the grade is
+ * re-read from the other works that assessed him. Ibn Ḥajar putting a man in
+ * ṭabaqa 1 is, conversely, as direct a statement of companionship as there is.
+ */
+function reconcileCompanionship(
+  grade: NarratorGrade,
+  tabaqa: number | undefined,
+  diedAH: number | undefined,
+  verdicts: RijalVerdict[],
+): NarratorGrade {
+  if (grade === 'companion') {
+    const impossible =
+      (tabaqa != null && tabaqa > 1) || (diedAH != null && diedAH > LAST_COMPANION_AH);
+    if (!impossible) return grade;
+    for (const candidate of GRADE_RANK) {
+      if (verdicts.some((v) => v.gradeEn === candidate)) return candidate;
+    }
+    return 'unknown';
+  }
+  // Ṭabaqa 1 is al-ṣaḥāba; nothing else needs to agree.
+  if (tabaqa === 1) return 'companion';
+  return grade;
+}
+
 function clean(value: unknown): string | undefined {
   if (value == null) return undefined;
   const text = String(value).trim();
@@ -125,6 +170,12 @@ export class RijalDatabase {
       namings.push(value);
     }
 
+    const tabaqa =
+      typeof entry.generation === 'number'
+        ? entry.generation
+        : parseTabaqa(entry.tabaqat, normaliseKey);
+    const diedAH = parseDeathYear(entry.death);
+
     const profile: RijalProfile = {
       id,
       fullNameAr: clean(entry.full_name) ?? namings[0] ?? '',
@@ -133,14 +184,11 @@ export class RijalDatabase {
       nasab: clean(entry.nasab),
       city: clean(entry.city),
       tabaqatAr: clean(entry.tabaqat),
-      tabaqa:
-        typeof entry.generation === 'number'
-          ? entry.generation
-          : parseTabaqa(entry.tabaqat, normaliseKey),
-      grade,
+      tabaqa,
+      grade: reconcileCompanionship(grade, tabaqa, diedAH, verdicts),
       gradeAr: clean(entry.grade_ar),
       diedRaw: clean(entry.death),
-      diedAH: parseDeathYear(entry.death),
+      diedAH,
       namings,
       verdicts,
       teachers: Array.isArray(entry.teachers) ? entry.teachers.map(Number) : [],
@@ -378,8 +426,4 @@ const LINK_EVIDENCE = 10;
 /** How far ahead the winner must be for the identification to count as clear. */
 const CLEAR_MARGIN = 3;
 
-/**
- * The last of the Companions died around 110 AH. Anyone who outlived that by a
- * margin cannot be the Companion at the end of a chain.
- */
-const LAST_COMPANION_AH = 120;
+

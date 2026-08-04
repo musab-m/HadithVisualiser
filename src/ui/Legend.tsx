@@ -49,6 +49,16 @@ export function Legend() {
       {open ? (
         <div className="legend__panel">
           <p>
+            Colour is the reliability grade the biographical database files a transmitter
+            under, which is not the same axis as the generation he sits on. A narrator in
+            the first generation shown in another colour is either one the chains name too
+            briefly to identify at all — about a quarter of that layer — or one the
+            literature grades by his reliability rather than filing him among the
+            Companions. Companionship claimed for a man whose own ṭabaqa or death year
+            rules it out is not shown: al-Iṣāba catalogues everyone <em>claimed</em> as a
+            Companion, including those it rejects.
+          </p>
+          <p>
             Generations are derived from the chains themselves, not from the classical
             ṭabaqāt. A link drawn as staying within a generation or running back up one may
             genuinely be transmission between contemporaries or from a junior to a senior —
