@@ -13,7 +13,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { NarratorGrade, RijalVerdict } from '../../../src/corpus/types.js';
-import { normaliseKey, parseDeathYear } from '../isnad/arabic.js';
+import { normaliseKey, parseDeathYear, stripDiacritics } from '../isnad/arabic.js';
 import { RIJAL_WORKS, parseTabaqa } from './sources.js';
 
 const GRADE_FILES: { file: string; grade: NarratorGrade }[] = [
@@ -45,6 +45,12 @@ export interface RijalProfile {
   students: number[];
   /** How many classical works carry an entry — a proxy for prominence. */
   weight: number;
+  /**
+   * A claim of companionship was set aside because his own ṭabaqa or death
+   * year ruled it out. Worth saying: a transmitter left unassessed because his
+   * one recorded verdict was that claim is not the same as one nobody judged.
+   */
+  companionshipRejected: boolean;
 }
 
 export interface Resolution {
@@ -69,6 +75,26 @@ const IGNORED_VALUES = new Set(['', '-', 'nan', 'null', 'none']);
  * for the disputed long-lived cases without admitting the second century.
  */
 const LAST_COMPANION_AH = 120;
+
+/**
+ * Read a verdict from the Arabic where no English grade was recorded.
+ *
+ * The merged database carries the critics' own words far more often than it
+ * carries a machine-readable grade, and those words are a fixed vocabulary:
+ * ثقة, صدوق, ضعيف, متروك. Negations are tested first, since ليس بثقة contains
+ * the word it denies.
+ */
+export function gradeFromArabic(text: string | undefined): NarratorGrade | undefined {
+  if (!text) return undefined;
+  const t = stripDiacritics(text);
+  if (/كذاب|وضاع|يضع الحديث|متهم بالكذب|دجال/.test(t)) return 'fabricator';
+  if (/متروك|ذاهب الحديث|ليس بثقة|ليس بشيء|هالك/.test(t)) return 'abandoned';
+  if (/مجهول|لا يعرف|لا يُعرف|مستور/.test(t)) return 'unknown';
+  if (/ضعيف|لين|سيء الحفظ|ليس بالقوي|واه|منكر الحديث/.test(t)) return 'weak';
+  if (/صدوق|لا بأس به|ليس به بأس|مقبول|صالح الحديث/.test(t)) return 'mostly_reliable';
+  if (/ثقة|ثقه|ثبت|حافظ|متقن|حجة|وثقوه|وثق|إمام/.test(t)) return 'reliable';
+  return undefined;
+}
 
 /** Preferred when several works grade a transmitter differently. */
 const GRADE_RANK: NarratorGrade[] = [
@@ -106,6 +132,11 @@ function reconcileCompanionship(
   }
   // Ṭabaqa 1 is al-ṣaḥāba; nothing else needs to agree.
   if (tabaqa === 1) return 'companion';
+  if (grade === 'unknown') {
+    for (const candidate of GRADE_RANK) {
+      if (verdicts.some((v) => v.gradeEn === candidate)) return candidate;
+    }
+  }
   return grade;
 }
 
@@ -142,8 +173,10 @@ export class RijalDatabase {
     for (const [key, value] of Object.entries(entry.classical_sources ?? {})) {
       const source = value as any;
       const gradeAr = clean(source?.grade_ar);
-      const gradeEn = clean(source?.grade_en) as NarratorGrade | undefined;
+      let gradeEn = clean(source?.grade_en) as NarratorGrade | undefined;
       if (!gradeAr && (!gradeEn || gradeEn === 'unknown')) continue;
+      // Most entries carry the critic's wording but no machine-readable grade.
+      if (!gradeEn || gradeEn === 'unknown') gradeEn = gradeFromArabic(gradeAr) ?? gradeEn;
       const work = RIJAL_WORKS[key];
       verdicts.push({
         key,
@@ -156,7 +189,12 @@ export class RijalDatabase {
     // al-Dhahabī's own one-word verdict is carried outside classical_sources.
     const dhahabi = clean(entry.dhahabi);
     if (dhahabi && !verdicts.some((v) => v.key === 'kashif')) {
-      verdicts.push({ key: 'dhahabi', work: 'al-Dhahabī', gradeAr: dhahabi });
+      verdicts.push({
+        key: 'dhahabi',
+        work: 'al-Dhahabī',
+        gradeAr: dhahabi,
+        gradeEn: gradeFromArabic(dhahabi),
+      });
     }
 
     const namings: string[] = [];
@@ -186,6 +224,9 @@ export class RijalDatabase {
       tabaqatAr: clean(entry.tabaqat),
       tabaqa,
       grade: reconcileCompanionship(grade, tabaqa, diedAH, verdicts),
+      companionshipRejected:
+        grade === 'companion' &&
+        ((tabaqa != null && tabaqa > 1) || (diedAH != null && diedAH > LAST_COMPANION_AH)),
       gradeAr: clean(entry.grade_ar),
       diedRaw: clean(entry.death),
       diedAH,
