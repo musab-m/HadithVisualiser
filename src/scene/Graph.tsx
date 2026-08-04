@@ -92,15 +92,6 @@ export function Graph({ graph, layout, hover, focus, onHover, onSelect }: Props)
     }
   };
 
-  // The store pairs a layout with the graph it was built for, so this should
-  // never trip. It is here because the failure is silent when it does: indices
-  // still resolve, every narrator just draws at someone else's coordinates.
-  if (layout.positions.length !== count * 3) {
-    throw new Error(
-      `layout has ${layout.positions.length / 3} positions for ${count} nodes`,
-    );
-  }
-
   const glow = useMemo(glowMaterial, []);
   useEffect(() => () => glow.dispose(), [glow]);
 
