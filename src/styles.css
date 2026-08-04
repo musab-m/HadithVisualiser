@@ -1592,10 +1592,18 @@ button {
     z-index: 50;
   }
 
+  /*
+    Both sheets come up from the same edge, and a narrator is most often opened
+    from a name inside the hadith you are reading. The biography is therefore
+    the newer of the two and has to sit on top; underneath, its close button is
+    covered by the reader's and the panel reads as not having opened at all.
+    Closing it gives the reader back.
+  */
   .detail {
     padding-left: 1.1rem;
     padding-right: 1.1rem;
     animation: rise 0.26s cubic-bezier(0.2, 0.8, 0.3, 1);
+    z-index: 55;
   }
 
   .reader {
@@ -1642,6 +1650,12 @@ button {
   /* The axis note and the link key need more room than a phone has spare. */
   .legend__axis,
   .legend__keys--links {
+    display: none;
+  }
+
+  /* The sheet covers the legend completely, so leaving it there leaves a
+     button that can be found by a screen reader or a stray tap but not seen. */
+  .app--controls .legend {
     display: none;
   }
 

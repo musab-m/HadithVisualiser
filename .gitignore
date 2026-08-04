@@ -3,3 +3,9 @@ dist
 .cache
 *.local
 .DS_Store
+
+# Playwright's output: traces, screenshots and the HTML report.
+test-results
+playwright-report
+blob-report
+.playwright

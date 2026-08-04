@@ -39,8 +39,8 @@ changed (`بالنية` for `بالنيات`, one translator's phrasing for anot
 demanding every term would hide exactly the corroborations the question is about.
 Adjacent word pairs are indexed too, which is what floats the exact wording to the
 top, and lets the results be narrowed to the reports carrying the phrase itself
-rather than the words scattered through them — 97 hadiths mention that wording;
-5 actually say it.
+rather than the words scattered through them — of the 21 hadiths matching those
+words, 17 carry them together.
 
 The layout is built for a phone as well as a desktop: the panel becomes a sheet
 that opens from the top bar, so the graph is never fighting it for the screen.
@@ -103,11 +103,39 @@ npx wrangler pages deploy dist
 a paid plan. Enable *Settings → Pages → Source: GitHub Actions* and the included
 `Deploy` workflow publishes on every push to `main`.
 
+### Tests
+
+```bash
+npm run build && npm test          # both projects
+npm run test:desktop               # just the desktop one
+npx playwright test --headed -g 'phrase'
+```
+
+The suite drives the built site in a real browser, because that is where this
+project's failures live: a chain graph paired with the wrong layout, an Arabic
+tokeniser splitting on diacritics, a panel that covers the button beneath it.
+None of those are visible to a unit test of the functions involved.
+
+| | |
+| --- | --- |
+| `loads.spec.ts` | the corpus fetches and draws; the canvas has a live GL context; the page has headings, names on every control, and a tab order that reaches them |
+| `controls.spec.ts` | every button and link — collections, chapters, pins, the reader, the biography, the legend — and a check that nothing on screen is covering anything else |
+| `search.spec.ts` | Arabic and English queries, the phrase-only scope, clearing, a query that matches nothing, paging, and composing with the collection filter |
+| `view.spec.ts` | the narrator menu, isolating and stacking narrators, and what survives a refresh |
+| `mobile.spec.ts` | the sheet, the long press, and the isolation bar's geometry on a 390px screen |
+
+Most tests start from a saved view holding one small collection, so the graph
+settles in a second rather than relaxing 49,821 chains; `loads.spec.ts` is the
+one that pays for the whole corpus. Timeouts are deliberately loose — CI has no
+GPU, WebGL falls back to software, and a tight limit fails on machine speed
+rather than on anything being wrong.
+
 ### Contributing
 
 `main` takes changes through pull requests only. `Checks` runs on every pull
-request — typecheck, build, and a validation that the committed corpus still
-matches its manifest — and is the status check `main` requires.
+request — typecheck, build, a validation that the committed corpus still matches
+its manifest, and the browser suite above. Both jobs are status checks `main`
+requires, so nothing merges on a red test.
 
 The rule that enforces this is kept in the repository as
 [`.github/rulesets/main.json`](.github/rulesets/main.json), so it can be read and
@@ -227,6 +255,7 @@ src/
   scene/         three.js rendering: instanced nodes, additive edges, glow
   state/         the store, and what of it survives a refresh
   ui/            selection sidebar, biography panel, hadith reader, node menu
+tests/           browser tests, run against the built site
 tools/ingest/
   books.ts       the catalogue — add a collection here
   isnad/         Arabic normalisation and the chain parser

@@ -44,6 +44,10 @@
           {
             "context": "typecheck and build",
             "integration_id": 15368
+          },
+          {
+            "context": "browser tests",
+            "integration_id": 15368
           }
         ]
       }

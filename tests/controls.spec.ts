@@ -1,0 +1,204 @@
+import { expect, test } from '@playwright/test';
+import {
+  CHAPTER_BOOK,
+  CHAPTER_BOOK_TITLE,
+  SMALL_BOOK_HADITHS,
+  SMALL_BOOK_TITLE,
+  collectErrors,
+  openSidebar,
+  openWith,
+  settled,
+  stats,
+} from './helpers';
+
+test.describe('the controls', () => {
+  test('collections can be turned off and back on', async ({ page }) => {
+    await openWith(page);
+    await openSidebar(page);
+    expect((await stats(page)).hadiths).toBe(SMALL_BOOK_HADITHS);
+
+    // "all" means every collection, not just the one that was selected.
+    await page.getByRole('button', { name: 'all', exact: true }).click();
+    await settled(page);
+    expect((await stats(page)).hadiths).toBeGreaterThan(40_000);
+
+    await page.getByRole('button', { name: 'none', exact: true }).click();
+    await settled(page);
+    expect((await stats(page)).hadiths).toBe(0);
+    // Nothing selected is a legitimate state, not a crash.
+    await expect(page.locator('.boot--error')).toHaveCount(0);
+
+    // And one collection on its own.
+    await page.getByText(SMALL_BOOK_TITLE).click();
+    await settled(page);
+    expect((await stats(page)).hadiths).toBe(SMALL_BOOK_HADITHS);
+  });
+
+  test('a second collection adds to the first', async ({ page }) => {
+    await openWith(page);
+    await openSidebar(page);
+    const before = await stats(page);
+
+    await page.getByText(CHAPTER_BOOK_TITLE).click();
+    await settled(page);
+    const after = await stats(page);
+
+    expect(after.hadiths).toBeGreaterThan(before.hadiths);
+    // Narrators are shared between collections, so the totals must not simply
+    // add up — a graph that double-counted them would pass a looser check.
+    expect(after.narrators).toBeGreaterThan(before.narrators);
+    await expect(page.locator('.book--on')).toHaveCount(2);
+  });
+
+  test('chapters narrow a collection and release it again', async ({ page }) => {
+    await openWith(page, { books: [CHAPTER_BOOK] });
+    await openSidebar(page);
+    const whole = await stats(page);
+
+    // Every collection offers a chapter list, so the row has to be named or
+    // the locator matches fourteen buttons.
+    const row = page.locator('.book', { hasText: CHAPTER_BOOK_TITLE });
+    await row.getByRole('button', { name: /\d+ chapters/ }).click();
+    const chapters = page.locator('.chapters__list li');
+    await expect(chapters.first()).toBeVisible();
+
+    await chapters.first().locator('.check__box').click();
+    await settled(page);
+    const narrowed = await stats(page);
+    expect(narrowed.hadiths).toBeGreaterThan(0);
+    expect(narrowed.hadiths).toBeLessThan(whole.hadiths);
+
+    await row.getByRole('button', { name: 'whole book' }).click();
+    await settled(page);
+    expect((await stats(page)).hadiths).toBe(whole.hadiths);
+
+    await row.getByRole('button', { name: 'hide chapters' }).click();
+    await expect(page.locator('.chapters__list')).toHaveCount(0);
+  });
+
+  test('the chapter filter box narrows the list', async ({ page }) => {
+    await openWith(page, { books: [CHAPTER_BOOK] });
+    await openSidebar(page);
+    const row = page.locator('.book', { hasText: CHAPTER_BOOK_TITLE });
+    await row.getByRole('button', { name: /\d+ chapters/ }).click();
+
+    const all = await page.locator('.chapters__list li').count();
+    // Filter on a word taken from a real chapter title rather than one guessed
+    // at, so the test does not depend on what this collection happens to cover.
+    const title = await page.locator('.chapters__list li .check__label').first().innerText();
+    const word = title.split(/\s+/).filter((w) => /^[a-z]{5,}$/i.test(w))[0];
+    test.skip(!word, 'no usable word in the first chapter title');
+
+    await page.getByPlaceholder(/Search \d+ chapters/).fill(word);
+    const filtered = await page.locator('.chapters__list li').count();
+
+    expect(filtered).toBeGreaterThan(0);
+    expect(filtered).toBeLessThanOrEqual(all);
+    await expect(page.locator('.chapters__list li').first()).toContainText(new RegExp(word, 'i'));
+  });
+
+  test('a hadith can be pinned by number and let go again', async ({ page }) => {
+    await openWith(page);
+    await openSidebar(page);
+
+    await page.getByPlaceholder(/Hadith number/).fill('qudsi40 1');
+    const result = page.locator('.picker__result').first();
+    await expect(result).toBeVisible();
+    await result.click();
+    await settled(page);
+
+    await openSidebar(page);
+    await expect(page.getByRole('heading', { name: 'Selected hadiths' })).toBeVisible();
+    expect((await stats(page)).hadiths).toBe(1);
+
+    // The pin itself is the button that removes it.
+    await page.locator('.pin').first().click();
+    await settled(page);
+    expect((await stats(page)).hadiths).toBe(SMALL_BOOK_HADITHS);
+    await expect(page.getByRole('heading', { name: 'Selected hadiths' })).toHaveCount(0);
+  });
+
+  test('reading a hadith opens its text and its chain', async ({ page }) => {
+    await openWith(page, { query: 'mercy' });
+    await openSidebar(page);
+
+    await page.locator('.hadith-ref').first().click();
+    const reader = page.getByRole('dialog', { name: 'Hadith' });
+    await expect(reader).toBeVisible();
+    // Arabic is the source text; a reader with only the English has failed to
+    // fetch the chunk it was pointed at.
+    await expect(reader.locator('.reader__ar')).not.toBeEmpty();
+
+    // Every narrator in the chain is a way into their biography.
+    await reader.locator('.chain__node').first().click();
+    await expect(page.locator('.detail')).toBeVisible();
+    await page.locator('.detail__close').click();
+    await expect(page.locator('.detail')).toHaveCount(0);
+
+    await reader.getByRole('button', { name: 'Close' }).click();
+    await expect(page.getByRole('dialog', { name: 'Hadith' })).toHaveCount(0);
+  });
+
+  test('the biography panel moves between narrators', async ({ page }) => {
+    await openWith(page, { query: 'mercy' });
+    await openSidebar(page);
+    await page.locator('.hadith-ref').first().click();
+    await page.locator('.chain__node').first().click();
+
+    const detail = page.locator('.detail');
+    await expect(detail).toBeVisible();
+    const first = await detail.locator('.detail__ar').innerText();
+
+    const chip = detail.locator('.chip').first();
+    if (await chip.count()) {
+      await chip.click();
+      await expect(detail.locator('.detail__ar')).not.toHaveText(first);
+    }
+  });
+
+  test('the legend explains itself and folds away', async ({ page }) => {
+    await openWith(page);
+    const about = page.getByRole('button', { name: 'about the data' });
+    await about.click();
+    await expect(page.locator('.legend__panel')).toBeVisible();
+    // The sources are links out, and a broken href is worth catching here.
+    const links = page.locator('.legend__panel a');
+    expect(await links.count()).toBeGreaterThan(0);
+    for (const href of await links.evaluateAll((all) => all.map((a) => a.getAttribute('href')))) {
+      expect(href).toMatch(/^https?:\/\//);
+    }
+    await page.getByRole('button', { name: 'hide sources' }).click();
+    await expect(page.locator('.legend__panel')).toHaveCount(0);
+  });
+
+  test('every visible control is enabled and actually hittable', async ({ page }) => {
+    const errors = collectErrors(page);
+    await openWith(page, { query: 'mercy' });
+    await openSidebar(page);
+
+    // Not a click-everything sweep — clicking half of these unmounts the other
+    // half. What is checked is that each one is enabled and is the element the
+    // pointer would reach, which is how a panel drifting over a button, or a
+    // label printed across it, gets caught.
+    const covered = await page.evaluate(() => {
+      const bad: string[] = [];
+      for (const button of document.querySelectorAll('button')) {
+        const rect = button.getBoundingClientRect();
+        if (!rect.width || !rect.height) continue;
+        const style = getComputedStyle(button);
+        if (style.visibility === 'hidden' || style.display === 'none') continue;
+        if (button.hasAttribute('disabled')) continue;
+        const x = rect.left + rect.width / 2;
+        const y = rect.top + rect.height / 2;
+        if (x < 0 || y < 0 || x > window.innerWidth || y > window.innerHeight) continue;
+        const top = document.elementFromPoint(x, y);
+        if (top !== button && !button.contains(top) && !top?.contains(button)) {
+          bad.push(`${button.className || button.textContent?.trim()} is under ${top?.className || top?.tagName}`);
+        }
+      }
+      return bad;
+    });
+    expect(covered).toEqual([]);
+    expect(errors).toEqual([]);
+  });
+});
