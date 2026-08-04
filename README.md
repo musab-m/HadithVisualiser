@@ -54,6 +54,33 @@ npm run dev
 
 `npm run build` produces a fully static site in `dist/` — no server, no API keys.
 
+### Deploying
+
+The generated corpus is committed, so a deploy is just `npm ci && npm run build`
+— CI never needs the 124 MB rijal database or the upstream collections. The build
+uses relative asset paths, so it works from a domain root or a project subpath
+without configuration.
+
+A `Deploy` workflow is included: enable Pages under *Settings → Pages → Source:
+GitHub Actions* and every push to `main` publishes.
+
+What the site actually costs to serve:
+
+| | gzipped |
+| --- | --- |
+| First load — app, narrator registry, all 16 book indexes | 1.6 MB |
+| A search query (fetches 2–3 index shards) | ~440 KB |
+| Opening a narrator's biography | ~105 KB |
+| Reading a hadith's text | ~150 KB |
+| Every byte, if one visitor fetched the whole corpus | 27 MB |
+
+245 files, 110 MB on disk, largest single file under 1 MB — inside the limits of
+every major free static host. Cloudflare Pages is the best fit if the site gets
+shared widely, being the only one of them without a monthly bandwidth cap;
+GitHub Pages is the least setup, since the repository is already there. Netlify
+works equally well. Vercel's free tier forbids commercial use, which may or may
+not matter.
+
 ### The catalogue
 
 ```bash
