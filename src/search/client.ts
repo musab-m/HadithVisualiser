@@ -46,6 +46,11 @@ export interface SearchResult {
   unindexed: string[];
   /** Matching hadith ids, best first. */
   ids: string[];
+  /**
+   * Of those, the ones carrying the query as a phrase — adjacent word pairs
+   * present, not merely the words scattered through the report.
+   */
+  phraseIds: string[];
   /** How many hadiths matched, before any cap. */
   total: number;
   /** Of those, how many carry the query as a phrase rather than scattered words. */
@@ -64,7 +69,7 @@ export async function search(
   books: Map<string, BookFile>,
 ): Promise<SearchResult> {
   const terms = [...new Set(tokenise(query))];
-  const empty: SearchResult = { terms, unindexed: [], ids: [], total: 0, phrase: 0 };
+  const empty: SearchResult = { terms, unindexed: [], ids: [], phraseIds: [], total: 0, phrase: 0 };
   if (!terms.length) return empty;
 
   const pairs = [...new Set(bigrams(tokenise(query)))];
@@ -110,24 +115,27 @@ export async function search(
   // looked for. The pair scoring below still floats the exact wording to top.
   const threshold = Math.max(1, Math.ceil(usable * MATCH_FRACTION));
 
-  const scored: { ordinal: number; score: number }[] = [];
+  const scored: { ordinal: number; score: number; phrase: boolean }[] = [];
   let phrase = 0;
   for (const [ordinal, matched] of hits) {
     if (matched < threshold) continue;
     const pairsHit = phrases.get(ordinal) ?? 0;
     if (pairsHit) phrase++;
-    scored.push({ ordinal, score: matched + pairsHit * 2 });
+    scored.push({ ordinal, score: matched + pairsHit * 2, phrase: pairsHit > 0 });
   }
   scored.sort((a, b) => b.score - a.score || a.ordinal - b.ordinal);
 
   const locate = ordinalLocator(books);
   const ids: string[] = [];
-  for (const { ordinal } of scored.slice(0, MAX_RESULTS)) {
-    const id = locate(ordinal);
-    if (id) ids.push(id);
+  const phraseIds: string[] = [];
+  for (const hit of scored.slice(0, MAX_RESULTS)) {
+    const id = locate(hit.ordinal);
+    if (!id) continue;
+    ids.push(id);
+    if (hit.phrase) phraseIds.push(id);
   }
 
-  return { terms, unindexed, ids, total: scored.length, phrase };
+  return { terms, unindexed, ids, phraseIds, total: scored.length, phrase };
 }
 
 /**

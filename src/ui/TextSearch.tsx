@@ -16,21 +16,25 @@ export function TextSearch() {
   const textQuery = useStore((s) => s.textQuery);
   const runSearch = useStore((s) => s.runSearch);
   const clearSearch = useStore((s) => s.clearSearch);
+  const phraseOnly = useStore((s) => s.phraseOnly);
+  const setPhraseOnly = useStore((s) => s.setPhraseOnly);
   // Matches without a parsable isnad have nothing to draw, so the graph can
   // legitimately hold fewer hadiths than the search found.
   const drawn = useStore((s) => (s.matches ? (s.graph?.hadithCount ?? null) : null));
   const [draft, setDraft] = useState('');
 
+  const listed = phraseOnly ? (matches?.phraseIds ?? []) : (matches?.ids ?? []);
+
   /** Which collections report this wording, and how often. */
   const spread = useMemo(() => {
-    if (!matches?.ids.length) return [];
+    if (!listed.length) return [];
     const counts = new Map<string, number>();
-    for (const id of matches.ids) {
+    for (const id of listed) {
       const slug = id.split(':')[0];
       counts.set(slug, (counts.get(slug) ?? 0) + 1);
     }
     return [...counts.entries()].sort((a, b) => b[1] - a[1]);
-  }, [matches]);
+  }, [listed]);
 
   if (!manifest?.search) return null;
 
@@ -70,7 +74,7 @@ export function TextSearch() {
       </form>
 
       {matches && !searching ? (
-        matches.ids.length ? (
+        listed.length ? (
           <div className="found">
             <p className="found__count">
               <strong>{matches.total.toLocaleString()}</strong>{' '}
@@ -83,6 +87,23 @@ export function TextSearch() {
               ) : null}
             </p>
 
+            {matches.phrase && matches.phrase < matches.total ? (
+              <div className="scopes" role="group" aria-label="Which matches to show">
+                <button
+                  className={`scope${phraseOnly ? '' : ' scope--on'}`}
+                  onClick={() => setPhraseOnly(false)}
+                >
+                  all {matches.total.toLocaleString()}
+                </button>
+                <button
+                  className={`scope${phraseOnly ? ' scope--on' : ''}`}
+                  onClick={() => setPhraseOnly(true)}
+                >
+                  the phrase only
+                </button>
+              </div>
+            ) : null}
+
             <ul className="found__spread">
               {spread.map(([slug, count]) => (
                 <li key={slug}>
@@ -93,9 +114,15 @@ export function TextSearch() {
             </ul>
 
             <p className="hint">
-              {drawn !== null && drawn < matches.total ? (
+              {phraseOnly ? (
                 <>
-                  {drawn.toLocaleString()} of those have a chain that could be read from the
+                  Showing only the reports carrying the words together. The rest matched on
+                  the words scattered through them.{' '}
+                </>
+              ) : null}
+              {drawn !== null && drawn < listed.length ? (
+                <>
+                  {drawn.toLocaleString()} of these have a chain that could be read from the
                   text; the rest are in the corpus but their isnad could not be parsed.{' '}
                 </>
               ) : null}
@@ -103,7 +130,7 @@ export function TextSearch() {
               single line.
             </p>
 
-            <HadithRefs key={textQuery} ids={matches.ids} onlyButton />
+            <HadithRefs key={`${textQuery}:${phraseOnly}`} ids={listed} onlyButton />
 
             {matches.unindexed.length ? (
               <p className="hint">

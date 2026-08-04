@@ -38,8 +38,12 @@ rather than all of them, because the same statement is transmitted with a word
 changed (`بالنية` for `بالنيات`, one translator's phrasing for another's), and
 demanding every term would hide exactly the corroborations the question is about.
 Adjacent word pairs are indexed too, which is what floats the exact wording to the
-top and lets the panel say how many carry the phrase itself rather than the words
-scattered.
+top, and lets the results be narrowed to the reports carrying the phrase itself
+rather than the words scattered through them — 97 hadiths mention that wording;
+5 actually say it.
+
+The layout is built for a phone as well as a desktop: the panel becomes a sheet
+that opens from the top bar, so the graph is never fighting it for the screen.
 
 ---
 

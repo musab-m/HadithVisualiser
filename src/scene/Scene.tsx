@@ -8,6 +8,9 @@ import type { LayoutBand } from '../graph/layout.worker';
 import { useStore, type LayoutResult } from '../state/store';
 import { Graph } from './Graph';
 
+/** Below this the viewport is a phone held upright. */
+const NARROW = 860;
+
 /** A faint starfield, so the space around the chains does not read as empty. */
 function Dust() {
   const geometry = useMemo(() => {
@@ -62,9 +65,13 @@ function Framing({
     // Labels sit above their nodes, so the top of the graph is not the top of
     // what has to be on screen.
     const fitHeight = (layout.height / 2 / vertical) * 1.32;
-    const fitWidth = (layout.radius / (vertical * aspect)) * 1.55;
+    // A phone has no sidebar over the canvas, so the graph gets the full width
+    // and needs far less horizontal padding than a desktop window does.
+    const sidePadding = size.width < NARROW ? 1.12 : 1.55;
+    const fitWidth = (layout.radius / (vertical * aspect)) * sidePadding;
     const distance = Math.max(fitHeight, fitWidth, 60);
     camera.position.set(distance * 0.3, layout.height * 0.16, distance * 0.94);
+    void size.height;
     camera.near = 0.5;
     camera.far = distance * 14;
     camera.updateProjectionMatrix();
@@ -82,6 +89,7 @@ function Framing({
  * most of what the vertical axis is for.
  */
 function Generations({ bands }: { bands: LayoutBand[] }) {
+  const width = useThree((state) => state.size.width);
   const rings = useMemo(() => {
     const segments = 96;
     return bands.map((band) => {
@@ -108,20 +116,25 @@ function Generations({ bands }: { bands: LayoutBand[] }) {
             <primitive object={geometry} attach="geometry" />
             <lineBasicMaterial color="#8ea2c8" transparent opacity={0.09} depthWrite={false} />
           </line>
-          <Html
-            position={[band.radius * 1.02, band.y, 0]}
-            zIndexRange={[10, 0]}
-            style={{ pointerEvents: 'none' }}
-          >
-            <div className="band-label">
-              <span className="band-label__gen">
-                {band.gen === 0 ? 'the Prophet ﷺ' : `generation ${band.gen}`}
-              </span>
-              {band.gen > 0 ? (
-                <span className="band-label__n">{band.count.toLocaleString()}</span>
-              ) : null}
-            </div>
-          </Html>
+          {/* On a phone these run off the edge and cover the graph; the rings
+              still show the layering, and a narrator's generation is in the
+              panel when you open him. */}
+          {width >= NARROW ? (
+            <Html
+              position={[band.radius * 1.02, band.y, 0]}
+              zIndexRange={[10, 0]}
+              style={{ pointerEvents: 'none' }}
+            >
+              <div className="band-label">
+                <span className="band-label__gen">
+                  {band.gen === 0 ? 'the Prophet ﷺ' : `generation ${band.gen}`}
+                </span>
+                {band.gen > 0 ? (
+                  <span className="band-label__n">{band.count.toLocaleString()}</span>
+                ) : null}
+              </div>
+            </Html>
+          ) : null}
         </group>
       ))}
     </>
@@ -141,13 +154,17 @@ function Labels({ graph, layout }: LabelProps) {
   const narrators = useStore((s) => s.narrators);
   const hover = useStore((s) => s.hover);
   const focus = useStore((s) => s.focus);
+  const width = useThree((state) => state.size.width);
 
   // Ranking is over every node, so it must not be redone on each hover.
   const ranked = useMemo(() => {
+    // A dozen Arabic names is readable across a desktop window and a wall of
+    // overlapping text on a phone.
+    const most = width < NARROW ? 5 : 12;
     const order = Array.from(graph.ids.keys());
     order.sort((a, b) => graph.weight[b] - graph.weight[a]);
-    return order.slice(0, graph.ids.length > 60 ? 12 : graph.ids.length);
-  }, [graph]);
+    return order.slice(0, graph.ids.length > 60 ? most : graph.ids.length);
+  }, [graph, width]);
 
   const shown = useMemo(() => {
     const picks = new Set(ranked);

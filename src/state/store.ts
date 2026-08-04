@@ -37,6 +37,8 @@ interface State {
   textQuery: string;
   matches?: SearchResult;
   searching: boolean;
+  /** Narrow a search to the reports carrying the query as a phrase. */
+  phraseOnly: boolean;
 
   /** The current selection's graph. Drives the counts in the sidebar. */
   graph?: GraphData;
@@ -69,6 +71,7 @@ interface State {
   setPins: (ids: string[]) => void;
   runSearch: (query: string) => Promise<void>;
   clearSearch: () => void;
+  setPhraseOnly: (on: boolean) => void;
   setFocus: (id?: string) => void;
   setHover: (id?: string) => void;
   read: (hadithId?: string) => Promise<void>;
@@ -87,13 +90,14 @@ function ensureWorker(): Worker {
 export const useStore = create<State>((set, get) => {
   /** Rebuild the graph from the current selection and lay it out. */
   const recompute = () => {
-    const { books, narrators, activeBooks, activeChapters, pinned, matches } = get();
+    const { books, narrators, activeBooks, activeChapters, pinned, matches, phraseOnly } = get();
     if (!books.size) return;
 
     const selection: { book: BookFile; hadiths: HadithRecord[] }[] = [];
 
     // A hadith picked by hand beats a search, which beats whole collections.
-    const explicit = pinned.length ? pinned : matches?.ids;
+    const found = phraseOnly ? matches?.phraseIds : matches?.ids;
+    const explicit = pinned.length ? pinned : found;
 
     if (explicit?.length) {
       const wanted = new Set(explicit);
@@ -142,6 +146,7 @@ export const useStore = create<State>((set, get) => {
     pinned: [],
     textQuery: '',
     searching: false,
+    phraseOnly: false,
     bios: new Map(),
     texts: new Map(),
     laying: false,
@@ -242,7 +247,7 @@ export const useStore = create<State>((set, get) => {
         const matches = await runTextSearch(query, manifest.search, books);
         // A query the user has already moved on from must not land.
         if (get().textQuery !== query) return;
-        set({ matches, searching: false });
+        set({ matches, searching: false, phraseOnly: false });
         recompute();
       } catch {
         set({ searching: false, matches: undefined });
@@ -250,7 +255,12 @@ export const useStore = create<State>((set, get) => {
     },
 
     clearSearch() {
-      set({ textQuery: '', matches: undefined, searching: false });
+      set({ textQuery: '', matches: undefined, searching: false, phraseOnly: false });
+      recompute();
+    },
+
+    setPhraseOnly(on) {
+      set({ phraseOnly: on });
       recompute();
     },
 
