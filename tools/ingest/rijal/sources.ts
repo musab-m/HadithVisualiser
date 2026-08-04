@@ -49,13 +49,44 @@ const TABAQAT_ORDINALS: Record<string, number> = {
   'الثانيه عشره': 12,
 };
 
-/** Parse `الثالثة` / `الحادية عشرة` into its ṭabaqa number. */
+/**
+ * Ways the sources say "Companion" instead of giving an ordinal. Ibn Ḥajar's
+ * first ṭabaqa *is* the Companions, so these are ṭabaqa 1 by definition.
+ */
+const COMPANION_WORDS = [
+  'صحابي',
+  'صحابية',
+  'له صحبة',
+  'لها صحبة',
+  'من الصحابة',
+  'الصحابة',
+];
+
+/**
+ * Companionship the sources themselves record as contested. Left unresolved
+ * rather than decided here.
+ */
+const DISPUTED = ['مختلف في صحبته', 'مختلف في صحبتها', 'يقال له صحبة'];
+
+/**
+ * Parse `الثالثة`, `الحادية عشرة` or a bare `صحابي` into a ṭabaqa number.
+ *
+ * Both the table and the input go through the same normalisation. They did not
+ * before, which meant `الأولى` — the Companions — matched nothing at all,
+ * because the table held it with ى where the normaliser produces ي.
+ */
 export function parseTabaqa(raw: unknown, normalise: (s: string) => string): number | undefined {
   if (!raw) return undefined;
   const key = normalise(String(raw));
   if (!key || key === '-') return undefined;
+
+  if (DISPUTED.some((phrase) => key.includes(normalise(phrase)))) return undefined;
+  if (COMPANION_WORDS.some((word) => key.includes(normalise(word)))) return 1;
+
   // Longest match first so `الثانية عشرة` beats `الثانية`.
-  const entries = Object.entries(TABAQAT_ORDINALS).sort((a, b) => b[0].length - a[0].length);
+  const entries = Object.entries(TABAQAT_ORDINALS)
+    .map(([word, n]) => [normalise(word), n] as const)
+    .sort((a, b) => b[0].length - a[0].length);
   for (const [word, n] of entries) if (key.includes(word)) return n;
   return undefined;
 }
