@@ -1037,6 +1037,26 @@ button {
   box-shadow: 0 0 8px currentColor;
 }
 
+.legend__keys--links {
+  margin-bottom: 0.55rem;
+  gap: 0.25rem 1rem;
+}
+
+.legend__keys--links li {
+  gap: 0.4rem;
+}
+
+.legend__keys--links em {
+  font-style: italic;
+  color: rgba(107, 119, 147, 0.85);
+}
+
+.legend__dash {
+  width: 14px;
+  height: 2px;
+  border-radius: 1px;
+}
+
 .legend__axis {
   line-height: 1.5;
   max-width: 22rem;
