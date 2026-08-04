@@ -54,6 +54,13 @@ button {
 .scene {
   position: absolute !important;
   inset: 0;
+  /*
+    The in-scene labels are DOM nodes that drei stacks up to z-index 20, which
+    otherwise puts them over the panels — narrator names printed across the
+    text of the hadith you opened. A stacking context here confines them to
+    the canvas, so every panel below sits above them by document order alone.
+  */
+  z-index: 0;
 }
 
 /* --- boot ---------------------------------------------------------------- */
@@ -522,6 +529,28 @@ button {
   font-variant-numeric: tabular-nums;
 }
 
+.scopes {
+  display: flex;
+  gap: 0.3rem;
+  margin: 0 0 0.8rem;
+}
+
+.scope {
+  flex: 1;
+  font-size: 0.66rem;
+  letter-spacing: 0.04em;
+  padding: 0.35rem 0.5rem;
+  border-radius: 6px;
+  border: 1px solid var(--edge);
+  color: var(--ink-faint);
+}
+
+.scope--on {
+  border-color: var(--gold-soft);
+  background: rgba(216, 178, 106, 0.12);
+  color: var(--gold);
+}
+
 .found__spread {
   list-style: none;
   margin: 0 0 0.2rem;
@@ -865,6 +894,31 @@ button {
   color: var(--gold);
 }
 
+.hadiths__pair {
+  display: flex;
+  align-items: stretch;
+  border: 1px solid var(--edge);
+  border-radius: 5px;
+  overflow: hidden;
+}
+
+.hadiths__pair .hadith-ref {
+  border: none;
+  border-radius: 0;
+}
+
+.reveal {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  margin-top: 0.6rem;
+}
+
+.reveal__left {
+  color: var(--ink-faint);
+  font-size: 0.65rem;
+}
+
 /* --- reader --------------------------------------------------------------- */
 
 .reader {
@@ -883,7 +937,7 @@ button {
   backdrop-filter: blur(20px);
   box-shadow: 0 30px 70px rgba(0, 0, 0, 0.6);
   animation: rise 0.26s cubic-bezier(0.2, 0.8, 0.3, 1);
-  z-index: 5;
+  z-index: 20;
 }
 
 @keyframes rise {
@@ -1186,41 +1240,207 @@ button {
   }
 }
 
-/* --- narrow screens ------------------------------------------------------- */
+/* --- the mobile top bar ---------------------------------------------------- */
+
+/* Wide screens have the sidebar permanently, so this is only for phones. */
+.topbar {
+  display: none;
+}
+
+/* --- narrow screens -------------------------------------------------------- */
 
 @media (max-width: 1100px) {
   .sidebar {
     width: 19rem;
   }
   .detail {
-    width: 21rem;
+    width: 22rem;
   }
   .legend {
     left: 20rem;
-    max-width: 18rem;
+    max-width: 17rem;
   }
   .reader {
-    width: min(40rem, calc(100vw - 42rem));
+    width: min(38rem, calc(100vw - 43rem));
   }
 }
 
+/*
+  Below this the panels stop being an overlay and become sheets. A translucent
+  sidebar sitting over the canvas works when it covers a third of a desktop
+  window; at phone width it covers the graph entirely, and the labels drawn
+  inside the canvas show through the panel on top of its text.
+*/
 @media (max-width: 860px) {
+  .topbar {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 30;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.7rem 1rem;
+    padding-top: max(0.7rem, env(safe-area-inset-top));
+    background: linear-gradient(to bottom, rgba(7, 10, 18, 0.95), rgba(7, 10, 18, 0.75) 70%, transparent);
+  }
+
+  .topbar__title {
+    margin: 0;
+    font-size: 1.15rem;
+    font-weight: 300;
+    letter-spacing: 0.16em;
+    color: var(--gold);
+  }
+
+  .topbar__toggle {
+    font-size: 0.68rem;
+    letter-spacing: 0.06em;
+    padding: 0.4rem 0.8rem;
+    border-radius: 999px;
+    border: 1px solid var(--gold-soft);
+    background: rgba(216, 178, 106, 0.12);
+    color: var(--gold);
+  }
+
+  /* The sheet: off-screen until the top bar asks for it. */
   .sidebar {
-    width: 100%;
-    max-height: 45%;
-    bottom: auto;
-    background: linear-gradient(to bottom, rgba(7, 10, 18, 0.96), rgba(7, 10, 18, 0.85));
-  }
-  .detail {
-    width: 100%;
     top: auto;
-    height: 62%;
+    bottom: 0;
+    width: 100%;
+    max-height: 82vh;
+    padding: 1rem 1rem 2rem;
+    padding-bottom: max(2rem, env(safe-area-inset-bottom));
+    border-radius: 16px 16px 0 0;
+    border-top: 1px solid var(--edge);
+    background: rgba(9, 12, 21, 0.98);
+    box-shadow: 0 -20px 50px rgba(0, 0, 0, 0.6);
+    transform: translateY(102%);
+    transition: transform 0.28s cubic-bezier(0.2, 0.8, 0.3, 1);
+    z-index: 40;
   }
-  .legend {
+
+  .app--controls .sidebar {
+    transform: translateY(0);
+  }
+
+  /* The title lives in the top bar now. */
+  .sidebar__head {
     display: none;
   }
+
+  .stats {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.4rem;
+    margin-bottom: 1.2rem;
+  }
+
+  .detail,
   .reader {
-    width: calc(100vw - 2rem);
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    top: auto;
+    width: 100%;
+    max-width: none;
+    max-height: 85vh;
+    transform: none;
+    border-radius: 16px 16px 0 0;
+    border-top: 1px solid var(--edge);
+    background: rgba(9, 12, 21, 0.98);
+    padding-bottom: max(2rem, env(safe-area-inset-bottom));
+    z-index: 50;
+  }
+
+  .detail {
+    padding-left: 1.1rem;
+    padding-right: 1.1rem;
+    animation: rise 0.26s cubic-bezier(0.2, 0.8, 0.3, 1);
+  }
+
+  .reader {
     min-width: 0;
+    padding-left: 1.1rem;
+    padding-right: 1.1rem;
+  }
+
+  @keyframes rise {
+    from {
+      opacity: 0;
+      transform: translateY(14px);
+    }
+  }
+
+  .detail__ar {
+    font-size: 1.3rem;
+  }
+
+  .row {
+    grid-template-columns: 7rem 1fr;
+  }
+
+  .reader__ar {
+    font-size: 1.1rem;
+    line-height: 1.95;
+  }
+
+  /* Room for the top bar, and out of the way of the sheets. */
+  .legend {
+    left: 1rem;
+    right: 1rem;
+    bottom: 0.75rem;
+    bottom: max(0.75rem, env(safe-area-inset-bottom));
+    max-width: none;
+    z-index: 10;
+  }
+
+  .legend__keys {
+    gap: 0.2rem 0.7rem;
+    font-size: 0.6rem;
+  }
+
+  /* The axis note and the link key need more room than a phone has spare. */
+  .legend__axis,
+  .legend__keys--links {
+    display: none;
+  }
+
+  .legend__panel {
+    max-height: 50vh;
+    overflow-y: auto;
+  }
+
+  .laying {
+    top: auto;
+    bottom: 6rem;
+    right: 1rem;
+  }
+
+  .chapters {
+    margin-left: 0.9rem;
+  }
+
+  .chapters__list {
+    max-height: 11rem;
+  }
+}
+
+/* Very small screens: the stats stack rather than squeeze. */
+@media (max-width: 400px) {
+  .stats {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  .stat__value {
+    font-size: 0.85rem;
+  }
+  .stat__label {
+    font-size: 0.52rem;
+  }
+  .topbar__toggle {
+    font-size: 0.62rem;
+    padding: 0.35rem 0.6rem;
   }
 }

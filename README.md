@@ -38,8 +38,12 @@ rather than all of them, because the same statement is transmitted with a word
 changed (`بالنية` for `بالنيات`, one translator's phrasing for another's), and
 demanding every term would hide exactly the corroborations the question is about.
 Adjacent word pairs are indexed too, which is what floats the exact wording to the
-top and lets the panel say how many carry the phrase itself rather than the words
-scattered.
+top, and lets the results be narrowed to the reports carrying the phrase itself
+rather than the words scattered through them — 97 hadiths mention that wording;
+5 actually say it.
+
+The layout is built for a phone as well as a desktop: the panel becomes a sheet
+that opens from the top bar, so the graph is never fighting it for the screen.
 
 ---
 
@@ -83,6 +87,11 @@ a paid plan. Enable *Settings → Pages → Source: GitHub Actions* and the incl
 `main` takes changes through pull requests only. `Checks` runs on every pull
 request — typecheck, build, and a validation that the committed corpus still
 matches its manifest — and is the status check `main` requires.
+
+The rule that enforces this is kept in the repository as
+[`.github/rulesets/main.json`](.github/rulesets/main.json), so it can be read and
+reviewed rather than living only in the settings UI. To apply it: *Settings →
+Rules → Rulesets → New ruleset → Import a ruleset*.
 
 Regenerating `public/data` produces a very large diff by design: the corpus is
 committed so that the site needs no build-time access to the sources. Say in the

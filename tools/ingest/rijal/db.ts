@@ -13,7 +13,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { NarratorGrade, RijalVerdict } from '../../../src/corpus/types.js';
-import { normaliseKey, parseDeathYear } from '../isnad/arabic.js';
+import { normaliseKey, parseDeathYear, stripDiacritics } from '../isnad/arabic.js';
 import { RIJAL_WORKS, parseTabaqa } from './sources.js';
 
 const GRADE_FILES: { file: string; grade: NarratorGrade }[] = [
@@ -45,6 +45,12 @@ export interface RijalProfile {
   students: number[];
   /** How many classical works carry an entry — a proxy for prominence. */
   weight: number;
+  /**
+   * A claim of companionship was set aside because his own ṭabaqa or death
+   * year ruled it out. Worth saying: a transmitter left unassessed because his
+   * one recorded verdict was that claim is not the same as one nobody judged.
+   */
+  companionshipRejected: boolean;
 }
 
 export interface Resolution {
@@ -63,6 +69,76 @@ export interface Resolution {
 }
 
 const IGNORED_VALUES = new Set(['', '-', 'nan', 'null', 'none']);
+
+/**
+ * The last of the Companions died around 110 AH. A margin past that leaves room
+ * for the disputed long-lived cases without admitting the second century.
+ */
+const LAST_COMPANION_AH = 120;
+
+/**
+ * Read a verdict from the Arabic where no English grade was recorded.
+ *
+ * The merged database carries the critics' own words far more often than it
+ * carries a machine-readable grade, and those words are a fixed vocabulary:
+ * ثقة, صدوق, ضعيف, متروك. Negations are tested first, since ليس بثقة contains
+ * the word it denies.
+ */
+export function gradeFromArabic(text: string | undefined): NarratorGrade | undefined {
+  if (!text) return undefined;
+  const t = stripDiacritics(text);
+  if (/كذاب|وضاع|يضع الحديث|متهم بالكذب|دجال/.test(t)) return 'fabricator';
+  if (/متروك|ذاهب الحديث|ليس بثقة|ليس بشيء|هالك/.test(t)) return 'abandoned';
+  if (/مجهول|لا يعرف|لا يُعرف|مستور/.test(t)) return 'unknown';
+  if (/ضعيف|لين|سيء الحفظ|ليس بالقوي|واه|منكر الحديث/.test(t)) return 'weak';
+  if (/صدوق|لا بأس به|ليس به بأس|مقبول|صالح الحديث/.test(t)) return 'mostly_reliable';
+  if (/ثقة|ثقه|ثبت|حافظ|متقن|حجة|وثقوه|وثق|إمام/.test(t)) return 'reliable';
+  return undefined;
+}
+
+/** Preferred when several works grade a transmitter differently. */
+const GRADE_RANK: NarratorGrade[] = [
+  'reliable',
+  'mostly_reliable',
+  'weak',
+  'abandoned',
+  'fabricator',
+];
+
+/**
+ * Decide whether a profile filed under "companion" really belongs there.
+ *
+ * The merged database takes companionship from an entry in Ibn Ḥajar's
+ * al-Iṣāba, but that work catalogues everyone who was *claimed* as a Companion
+ * — including those it goes on to reject — so the bucket over-collects. Where a
+ * profile's own ṭabaqa or death year contradicts the claim, the grade is
+ * re-read from the other works that assessed him. Ibn Ḥajar putting a man in
+ * ṭabaqa 1 is, conversely, as direct a statement of companionship as there is.
+ */
+function reconcileCompanionship(
+  grade: NarratorGrade,
+  tabaqa: number | undefined,
+  diedAH: number | undefined,
+  verdicts: RijalVerdict[],
+): NarratorGrade {
+  if (grade === 'companion') {
+    const impossible =
+      (tabaqa != null && tabaqa > 1) || (diedAH != null && diedAH > LAST_COMPANION_AH);
+    if (!impossible) return grade;
+    for (const candidate of GRADE_RANK) {
+      if (verdicts.some((v) => v.gradeEn === candidate)) return candidate;
+    }
+    return 'unknown';
+  }
+  // Ṭabaqa 1 is al-ṣaḥāba; nothing else needs to agree.
+  if (tabaqa === 1) return 'companion';
+  if (grade === 'unknown') {
+    for (const candidate of GRADE_RANK) {
+      if (verdicts.some((v) => v.gradeEn === candidate)) return candidate;
+    }
+  }
+  return grade;
+}
 
 function clean(value: unknown): string | undefined {
   if (value == null) return undefined;
@@ -97,8 +173,10 @@ export class RijalDatabase {
     for (const [key, value] of Object.entries(entry.classical_sources ?? {})) {
       const source = value as any;
       const gradeAr = clean(source?.grade_ar);
-      const gradeEn = clean(source?.grade_en) as NarratorGrade | undefined;
+      let gradeEn = clean(source?.grade_en) as NarratorGrade | undefined;
       if (!gradeAr && (!gradeEn || gradeEn === 'unknown')) continue;
+      // Most entries carry the critic's wording but no machine-readable grade.
+      if (!gradeEn || gradeEn === 'unknown') gradeEn = gradeFromArabic(gradeAr) ?? gradeEn;
       const work = RIJAL_WORKS[key];
       verdicts.push({
         key,
@@ -111,7 +189,12 @@ export class RijalDatabase {
     // al-Dhahabī's own one-word verdict is carried outside classical_sources.
     const dhahabi = clean(entry.dhahabi);
     if (dhahabi && !verdicts.some((v) => v.key === 'kashif')) {
-      verdicts.push({ key: 'dhahabi', work: 'al-Dhahabī', gradeAr: dhahabi });
+      verdicts.push({
+        key: 'dhahabi',
+        work: 'al-Dhahabī',
+        gradeAr: dhahabi,
+        gradeEn: gradeFromArabic(dhahabi),
+      });
     }
 
     const namings: string[] = [];
@@ -125,6 +208,12 @@ export class RijalDatabase {
       namings.push(value);
     }
 
+    const tabaqa =
+      typeof entry.generation === 'number'
+        ? entry.generation
+        : parseTabaqa(entry.tabaqat, normaliseKey);
+    const diedAH = parseDeathYear(entry.death);
+
     const profile: RijalProfile = {
       id,
       fullNameAr: clean(entry.full_name) ?? namings[0] ?? '',
@@ -133,14 +222,14 @@ export class RijalDatabase {
       nasab: clean(entry.nasab),
       city: clean(entry.city),
       tabaqatAr: clean(entry.tabaqat),
-      tabaqa:
-        typeof entry.generation === 'number'
-          ? entry.generation
-          : parseTabaqa(entry.tabaqat, normaliseKey),
-      grade,
+      tabaqa,
+      grade: reconcileCompanionship(grade, tabaqa, diedAH, verdicts),
+      companionshipRejected:
+        grade === 'companion' &&
+        ((tabaqa != null && tabaqa > 1) || (diedAH != null && diedAH > LAST_COMPANION_AH)),
       gradeAr: clean(entry.grade_ar),
       diedRaw: clean(entry.death),
-      diedAH: parseDeathYear(entry.death),
+      diedAH,
       namings,
       verdicts,
       teachers: Array.isArray(entry.teachers) ? entry.teachers.map(Number) : [],
@@ -155,6 +244,29 @@ export class RijalDatabase {
       if (bucket) bucket.push(id);
       else this.byName.set(key, [id]);
     }
+  }
+
+  /**
+   * Drop the father from the candidates for `ابن X`.
+   *
+   * This is not a matter of weight. `ابن عمر` denotes ʿUmar's son and cannot
+   * denote ʿUmar, however much of the surrounding chain corroborates the
+   * father — and the father, being the more prominent man, otherwise wins.
+   * Scored as a penalty it was outvoted by two teacher/student records, and
+   * 1,237 of ʿAbd Allāh ibn ʿUmar's narrations were filed under his father.
+   */
+  private excludeFather(ids: number[], key: string): number[] {
+    if (!key.startsWith('ابن ')) return ids;
+    const father = key.slice(4);
+    const kept = ids.filter((id) => {
+      const profile = this.profiles.get(id);
+      if (!profile) return false;
+      const full = normaliseKey(profile.fullNameAr);
+      return full !== father && !full.startsWith(`${father} `);
+    });
+    // If that leaves nobody, the index knows only the father under this name
+    // and refusing every candidate would lose the link altogether.
+    return kept.length ? kept : ids;
   }
 
   get(id: number): RijalProfile | undefined {
@@ -192,7 +304,7 @@ export class RijalDatabase {
         const key = run.join(' ');
         for (const variant of kunyaVariants(key)) {
           const ids = this.byName.get(variant);
-          if (ids) return { ids, key: variant };
+          if (ids) return { ids: this.excludeFather(ids, variant), key: variant };
         }
       }
     }
@@ -288,6 +400,15 @@ export class RijalDatabase {
     // Index artefacts: a name is not a name if it carries a catalogue number.
     if (/\d/.test(candidate.fullNameAr)) score -= 10;
 
+    // `ابن عمر` is ʿUmar's son, not ʿUmar. Without this the father wins on
+    // prominence every time and the two are merged into one node — which is
+    // how ʿUmar ibn al-Khaṭṭāb came to be labelled Ibn ʿUmar and to carry his
+    // son's chains as well as his own.
+    if (key.startsWith('ابن ')) {
+      const father = key.slice(4);
+      if (fullKey === father || fullKey.startsWith(`${father} `)) score -= 14;
+    }
+
     // A transmitter the sources name many ways, and record with a lineage, is
     // a figure they were interested in — and the likelier referent of a bare
     // alias like `ابن عباس`.
@@ -378,8 +499,4 @@ const LINK_EVIDENCE = 10;
 /** How far ahead the winner must be for the identification to count as clear. */
 const CLEAR_MARGIN = 3;
 
-/**
- * The last of the Companions died around 110 AH. Anyone who outlived that by a
- * margin cannot be the Companion at the end of a chain.
- */
-const LAST_COMPANION_AH = 120;
+

@@ -1,5 +1,6 @@
 import { GENERATION_SOURCE_LABEL, GRADE_COLOR, GRADE_LABEL, PROPHET_ID } from '../corpus/types';
 import { useStore } from '../state/store';
+import { HadithRefs } from './HadithRefs';
 
 function Row({ label, value }: { label: string; value?: string }) {
   if (!value) return null;
@@ -17,7 +18,6 @@ export function NarratorPanel() {
   const bios = useStore((s) => s.bios);
   const books = useStore((s) => s.books);
   const setFocus = useStore((s) => s.setFocus);
-  const read = useStore((s) => s.read);
   const setPins = useStore((s) => s.setPins);
 
   if (!focus) return null;
@@ -170,18 +170,7 @@ export function NarratorPanel() {
               show only these
             </button>
           </div>
-          <ul className="hadiths">
-            {bio.hadiths.slice(0, 40).map((id) => (
-              <li key={id}>
-                <button className="hadith-ref" onClick={() => void read(id)}>
-                  {id}
-                </button>
-              </li>
-            ))}
-          </ul>
-          {bio.hadiths.length > 40 ? (
-            <p className="hint">and {(bio.hadiths.length - 40).toLocaleString()} more</p>
-          ) : null}
+          <HadithRefs key={focus} ids={bio.hadiths} />
         </section>
       ) : null}
     </aside>

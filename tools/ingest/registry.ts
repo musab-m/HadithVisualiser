@@ -295,9 +295,11 @@ function describe(
           diedRaw: profile.diedRaw,
           note:
             kunyaHit?.note ??
-            (uncertain
-              ? 'The chains name this transmitter briefly, and more than one figure in the rijal literature fits. This is the best reading of the name, not a settled identification.'
-              : undefined),
+            (profile.companionshipRejected && profile.grade === 'unknown'
+              ? 'The one assessment on record for him was a claim of companionship, which his ṭabaqa and death year rule out — al-Iṣāba lists everyone the claim was made for, including those it rejects. That leaves this database with no grading of his reliability; it does not mean the critics passed over him.'
+              : uncertain
+                ? 'The chains name this transmitter briefly, and more than one figure in the rijal literature fits. This is the best reading of the name, not a settled identification.'
+                : undefined),
           verdicts: profile.verdicts,
           variants: [...entry.surfaces.keys()],
           teachers: profile.teachers.map((id) => `r${id}`),
