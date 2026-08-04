@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib';
 import type { GraphData } from '../graph/build';
+import type { LayoutBand } from '../graph/layout.worker';
 import { useStore, type LayoutResult } from '../state/store';
 import { Graph } from './Graph';
 
@@ -49,7 +50,13 @@ function Framing({
 }) {
   const camera = useThree((state) => state.camera as THREE.PerspectiveCamera);
   const size = useThree((state) => state.size);
+  // Framing moves the camera, so it must happen when the graph changes and at
+  // no other time. Anything else — a resize, a re-render behind a hover —
+  // would yank the view back and undo whatever the viewer was looking at.
+  const framed = useRef<LayoutResult>(undefined);
   useEffect(() => {
+    if (framed.current === layout) return;
+    framed.current = layout;
     const vertical = Math.tan((camera.fov * Math.PI) / 360);
     const aspect = Math.max(size.width / size.height, 0.4);
     // Labels sit above their nodes, so the top of the graph is not the top of
@@ -65,6 +72,60 @@ function Framing({
     controls.current?.update();
   }, [layout, camera, controls, size]);
   return null;
+}
+
+/**
+ * A faint ring at each generation, numbered at the rim.
+ *
+ * Without them the layers read as one continuous cloud, and there is no way to
+ * tell whether a narrator sits three links from the Prophet or six — which is
+ * most of what the vertical axis is for.
+ */
+function Generations({ bands }: { bands: LayoutBand[] }) {
+  const rings = useMemo(() => {
+    const segments = 96;
+    return bands.map((band) => {
+      const points = new Float32Array((segments + 1) * 3);
+      for (let i = 0; i <= segments; i++) {
+        const angle = (i / segments) * Math.PI * 2;
+        points[i * 3] = Math.cos(angle) * band.radius;
+        points[i * 3 + 1] = band.y;
+        points[i * 3 + 2] = Math.sin(angle) * band.radius;
+      }
+      const geometry = new THREE.BufferGeometry();
+      geometry.setAttribute('position', new THREE.BufferAttribute(points, 3));
+      return { band, geometry };
+    });
+  }, [bands]);
+
+  useEffect(() => () => rings.forEach(({ geometry }) => geometry.dispose()), [rings]);
+
+  return (
+    <>
+      {rings.map(({ band, geometry }) => (
+        <group key={band.gen}>
+          <line>
+            <primitive object={geometry} attach="geometry" />
+            <lineBasicMaterial color="#8ea2c8" transparent opacity={0.09} depthWrite={false} />
+          </line>
+          <Html
+            position={[band.radius * 1.02, band.y, 0]}
+            zIndexRange={[10, 0]}
+            style={{ pointerEvents: 'none' }}
+          >
+            <div className="band-label">
+              <span className="band-label__gen">
+                {band.gen === 0 ? 'the Prophet ﷺ' : `generation ${band.gen}`}
+              </span>
+              {band.gen > 0 ? (
+                <span className="band-label__n">{band.count.toLocaleString()}</span>
+              ) : null}
+            </div>
+          </Html>
+        </group>
+      ))}
+    </>
+  );
 }
 
 interface LabelProps {
@@ -120,7 +181,13 @@ function Labels({ graph, layout }: LabelProps) {
           >
             <div className={`node-label${emphasis ? ' node-label--active' : ''}`}>
               <span className="node-label__ar">{entry?.ar ?? id}</span>
-              {emphasis && entry?.en ? <span className="node-label__en">{entry.en}</span> : null}
+              {emphasis ? (
+                <span className="node-label__meta">
+                  {entry?.en ? `${entry.en} · ` : ''}
+                  {graph.gen[i] === 0 ? 'the origin' : `generation ${graph.gen[i]}`}
+                  {entry?.d ? ` · d. ${entry.d} AH` : ''}
+                </span>
+              ) : null}
             </div>
           </Html>
         );
@@ -130,14 +197,16 @@ function Labels({ graph, layout }: LabelProps) {
 }
 
 export function Scene() {
-  const graph = useStore((s) => s.graph);
-  const layout = useStore((s) => s.layout);
+  // The paired graph and layout, never one without the other.
+  const scene = useStore((s) => s.scene);
   const hover = useStore((s) => s.hover);
   const focus = useStore((s) => s.focus);
   const setHover = useStore((s) => s.setHover);
   const setFocus = useStore((s) => s.setFocus);
   const controls = useRef<OrbitControlsImpl>(null);
 
+  const graph = scene?.graph;
+  const layout = scene?.layout;
   const ready = graph && layout && graph.ids.length > 0;
 
   return (
@@ -156,6 +225,7 @@ export function Scene() {
       {ready ? (
         <>
           <Framing layout={layout} controls={controls} />
+          <Generations bands={layout.bands} />
           <Graph
             graph={graph}
             layout={layout}

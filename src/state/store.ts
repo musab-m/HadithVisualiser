@@ -10,13 +10,14 @@ import type {
 } from '../corpus/types';
 import { buildGraph, type GraphData } from '../graph/build';
 import { search as runTextSearch, type SearchResult } from '../search/client';
-import type { LayoutResponse } from '../graph/layout.worker';
+import type { LayoutBand, LayoutResponse } from '../graph/layout.worker';
 
 export interface LayoutResult {
   positions: Float32Array;
   radius: number;
   height: number;
   spacing: number;
+  bands: LayoutBand[];
 }
 
 interface State {
@@ -37,8 +38,18 @@ interface State {
   matches?: SearchResult;
   searching: boolean;
 
+  /** The current selection's graph. Drives the counts in the sidebar. */
   graph?: GraphData;
-  layout?: LayoutResult;
+  /**
+   * The graph the layout below was computed for, and its positions.
+   *
+   * These travel together and are never set apart. Node indices are only
+   * meaningful against the graph that produced them, so pairing a new graph
+   * with stale positions puts every narrator at someone else's coordinates —
+   * and hover, which resolves a name from the index the raycast returns, then
+   * reports the wrong person entirely.
+   */
+  scene?: { graph: GraphData; layout: LayoutResult };
   laying: boolean;
 
   focus?: string;
@@ -110,7 +121,7 @@ export const useStore = create<State>((set, get) => {
     instance.onmessage = (event: MessageEvent<LayoutResponse>) => {
       // A slower earlier layout must not overwrite a newer one.
       if (token !== layoutToken) return;
-      set({ layout: event.data, laying: false });
+      set({ scene: { graph, layout: event.data }, laying: false });
     };
     instance.postMessage({
       gen: graph.gen,

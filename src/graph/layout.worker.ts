@@ -35,6 +35,16 @@ export interface LayoutResponse {
    * and glow all have to follow it or one of the two ends up unreadable.
    */
   spacing: number;
+  /** One entry per generation, so the scene can show what the layers mean. */
+  bands: LayoutBand[];
+}
+
+export interface LayoutBand {
+  /** Generations from the Prophet: 0 is him, 1 the Companions, and so on. */
+  gen: number;
+  y: number;
+  radius: number;
+  count: number;
 }
 
 /**
@@ -57,7 +67,7 @@ function layout(request: LayoutRequest): LayoutResponse {
   const iterations = request.iterations ?? 220;
   const count = gen.length;
   const positions = new Float32Array(count * 3);
-  if (!count) return { positions, radius: 1, height: 1, spacing: 1 };
+  if (!count) return { positions, radius: 1, height: 1, spacing: 1, bands: [] };
 
   // --- layers ---------------------------------------------------------------
   let maxGen = 0;
@@ -212,7 +222,25 @@ function layout(request: LayoutRequest): LayoutResponse {
   }
   const spacing = Math.min((2 * busiestRadius) / Math.sqrt(busiest), LAYER_GAP * 0.7);
 
-  return { positions, radius, height, spacing };
+  // Report the layers themselves. Nodes sit at their own exact depth, so a
+  // band is where a generation is centred rather than a line every node is on.
+  const bands: LayoutBand[] = [];
+  for (let g = 0; g <= maxGen; g++) {
+    if (!layers[g].length) continue;
+    let extent = 0;
+    for (const node of layers[g]) {
+      const r = Math.hypot(positions[node * 3], positions[node * 3 + 2]);
+      if (r > extent) extent = r;
+    }
+    bands.push({
+      gen: g,
+      y: height / 2 - g * LAYER_GAP,
+      radius: extent + LAYER_GAP * 0.25,
+      count: layers[g].length,
+    });
+  }
+
+  return { positions, radius, height, spacing, bands };
 }
 
 /**
