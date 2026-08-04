@@ -88,6 +88,11 @@ a paid plan. Enable *Settings → Pages → Source: GitHub Actions* and the incl
 request — typecheck, build, and a validation that the committed corpus still
 matches its manifest — and is the status check `main` requires.
 
+The rule that enforces this is kept in the repository as
+[`.github/rulesets/main.json`](.github/rulesets/main.json), so it can be read and
+reviewed rather than living only in the settings UI. To apply it: *Settings →
+Rules → Rulesets → New ruleset → Import a ruleset*.
+
 Regenerating `public/data` produces a very large diff by design: the corpus is
 committed so that the site needs no build-time access to the sources. Say in the
 pull request which books were re-ingested and what the counts came out as.
