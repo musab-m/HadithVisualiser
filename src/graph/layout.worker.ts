@@ -22,9 +22,17 @@ export interface LayoutRequest {
   edgeWeight: Float32Array;
   /** Relaxation sweeps. More is tidier and slower. */
   iterations?: number;
+  /**
+   * Echoed back untouched, so the caller can tell which request a result
+   * belongs to. The worker takes messages one at a time, and a result that
+   * arrives after the selection has changed is for a graph that no longer
+   * exists.
+   */
+  token: number;
 }
 
 export interface LayoutResponse {
+  token: number;
   positions: Float32Array;
   /** Bounding radius, so the camera can frame the result. */
   radius: number;
@@ -66,8 +74,9 @@ function layout(request: LayoutRequest): LayoutResponse {
   const { gen, genExact, weight, edges, edgeWeight } = request;
   const iterations = request.iterations ?? 220;
   const count = gen.length;
+  const token = request.token;
   const positions = new Float32Array(count * 3);
-  if (!count) return { positions, radius: 1, height: 1, spacing: 1, bands: [] };
+  if (!count) return { token, positions, radius: 1, height: 1, spacing: 1, bands: [] };
 
   // --- layers ---------------------------------------------------------------
   let maxGen = 0;
@@ -240,7 +249,7 @@ function layout(request: LayoutRequest): LayoutResponse {
     });
   }
 
-  return { positions, radius, height, spacing, bands };
+  return { token, positions, radius, height, spacing, bands };
 }
 
 /**

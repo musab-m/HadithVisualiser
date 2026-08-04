@@ -224,7 +224,15 @@ export function Scene() {
 
   const graph = scene?.graph;
   const layout = scene?.layout;
-  const ready = graph && layout && graph.ids.length > 0;
+  // The store only ever pairs a layout with the graph it was computed for, so
+  // the counts agreeing is a restatement of that. It is checked here rather
+  // than trusted because the failure has no floor: indices still resolve, so
+  // every narrator would simply be drawn at someone else's coordinates — and
+  // where the two disagree on how many there are, drawing nothing for a frame
+  // is recoverable in a way that throwing out of the render is not. A thrown
+  // error unmounts the canvas, and the WebGL context goes with it.
+  const ready =
+    graph && layout && graph.ids.length > 0 && layout.positions.length === graph.ids.length * 3;
 
   return (
     <Canvas

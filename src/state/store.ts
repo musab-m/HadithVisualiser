@@ -79,12 +79,30 @@ interface State {
 
 let worker: Worker | undefined;
 let layoutToken = 0;
+/** Whether a layout is in flight, so a superseded one can be abandoned. */
+let running = false;
 
 function ensureWorker(): Worker {
   worker ??= new Worker(new URL('../graph/layout.worker.ts', import.meta.url), {
     type: 'module',
   });
   return worker;
+}
+
+/**
+ * Give up on a layout that is still running.
+ *
+ * The worker takes one message at a time and a full-corpus relaxation is a
+ * second or two of solid work, so unchecking three books in a row queues three
+ * of them — the newest selection waits behind two results that will be thrown
+ * away. There is no way to interrupt a worker mid-loop; terminating it is the
+ * interrupt, and starting a fresh one costs nothing next to the work avoided.
+ */
+function abandonLayout(): void {
+  if (!running) return;
+  worker?.terminate();
+  worker = undefined;
+  running = false;
 }
 
 export const useStore = create<State>((set, get) => {
@@ -121,13 +139,23 @@ export const useStore = create<State>((set, get) => {
     set({ graph, laying: true });
 
     const token = ++layoutToken;
+    abandonLayout();
+    running = true;
     const instance = ensureWorker();
     instance.onmessage = (event: MessageEvent<LayoutResponse>) => {
-      // A slower earlier layout must not overwrite a newer one.
-      if (token !== layoutToken) return;
+      // Compare the token the worker echoed, not the one this closure captured.
+      // The handler is replaced on every recompute, so only the newest one ever
+      // runs, and checking its own token against the newest request compares a
+      // request with itself — it can never fail. An earlier result would then be
+      // paired with the latest graph, putting every narrator at someone else's
+      // coordinates, or blowing up outright when the two disagree on how many
+      // narrators there are.
+      if (event.data.token !== layoutToken) return;
+      running = false;
       set({ scene: { graph, layout: event.data }, laying: false });
     };
     instance.postMessage({
+      token,
       gen: graph.gen,
       genExact: graph.genExact,
       weight: graph.weight,
