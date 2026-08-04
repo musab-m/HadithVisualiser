@@ -12,26 +12,42 @@ import {
 } from './helpers';
 
 test.describe('the controls', () => {
-  test('collections can be turned off and back on', async ({ page }) => {
+  test('a collection can be turned off and back on', async ({ page }) => {
     await openWith(page);
     await openSidebar(page);
     expect((await stats(page)).hadiths).toBe(SMALL_BOOK_HADITHS);
 
-    // "all" means every collection, not just the one that was selected.
+    await page.locator('.books').getByText(SMALL_BOOK_TITLE).click();
+    await settled(page);
+    // Nothing selected is a legitimate state, not a crash.
+    expect((await stats(page)).hadiths).toBe(0);
+    await expect(page.locator('.boot--error')).toHaveCount(0);
+    await expect(page.locator('.book--on')).toHaveCount(0);
+
+    await page.locator('.books').getByText(SMALL_BOOK_TITLE).click();
+    await settled(page);
+    expect((await stats(page)).hadiths).toBe(SMALL_BOOK_HADITHS);
+  });
+
+  test('all and none select every collection and no collection', async ({ page }) => {
+    // Whole-corpus interaction: nearly fifty thousand chains through eight
+    // thousand narrators, rendered without a GPU on CI. The site is responsive
+    // enough on hardware; here the main thread is busy for seconds at a time,
+    // and a click issued into that has to be allowed to wait.
+    test.slow();
+    await openWith(page);
+    await openSidebar(page);
+
     await page.getByRole('button', { name: 'all', exact: true }).click();
     await settled(page);
     expect((await stats(page)).hadiths).toBeGreaterThan(40_000);
+    const books = await page.locator('.books > li').count();
+    await expect(page.locator('.book--on')).toHaveCount(books);
 
-    await page.getByRole('button', { name: 'none', exact: true }).click();
+    await page.getByRole('button', { name: 'none', exact: true }).click({ timeout: 90_000 });
     await settled(page);
     expect((await stats(page)).hadiths).toBe(0);
-    // Nothing selected is a legitimate state, not a crash.
-    await expect(page.locator('.boot--error')).toHaveCount(0);
-
-    // And one collection on its own.
-    await page.getByText(SMALL_BOOK_TITLE).click();
-    await settled(page);
-    expect((await stats(page)).hadiths).toBe(SMALL_BOOK_HADITHS);
+    await expect(page.locator('.book--on')).toHaveCount(0);
   });
 
   test('a second collection adds to the first', async ({ page }) => {
