@@ -9,16 +9,32 @@
 
 import { NARRATOR_GRADES, PROPHET_ID, collectorId, type BookFile, type HadithRecord, type NarratorGrade, type NarratorIndexEntry } from '../corpus/types';
 
+/** How a link sits relative to the generations it joins. */
+export const LINK_FORWARD = 0;
+/** Between contemporaries — riwāyat al-aqrān. */
+export const LINK_PEER = 1;
+/** From a later generation to an earlier one — riwāyat al-akābir ʿan al-aṣāghir. */
+export const LINK_BACKWARD = 2;
+
 export interface GraphData {
   /** Node index → narrator id. */
   ids: string[];
   index: Map<string, number>;
-  /** Layer: 0 is the Prophet, rising with distance down the chain. */
+  /**
+   * Layer: 0 is the Prophet, 1 the Companions, rising with distance.
+   *
+   * Read from the narrator registry, where it is settled once across the whole
+   * corpus from the chains, Ibn Ḥajar's ṭabaqāt and the company each narrator
+   * keeps. Deriving it here from the selection instead would move a man a
+   * generation whenever a book was toggled, and would throw away everything
+   * the biographical literature already knows about people the chains barely
+   * mention. A selection that skips a generation now shows the gap, which is
+   * itself worth seeing — it is an elevated chain.
+   */
   gen: Int32Array;
   /**
-   * The same figure as a mean rather than a median. A narrator who sits fifth
-   * in most chains and third in some belongs a little above one who is always
-   * fifth, and letting that show keeps the layers from reading as flat discs.
+   * Position within the generation, `gen` plus a fraction, ordered by death
+   * year so the seniors of a generation sit above its juniors.
    */
   genExact: Float32Array;
   /** How many selected hadiths pass through this narrator. */
@@ -29,6 +45,10 @@ export interface GraphData {
   edges: Uint32Array;
   /** How many selected hadiths run along each edge. */
   edgeWeight: Float32Array;
+  /** Per edge: LINK_FORWARD, LINK_PEER or LINK_BACKWARD. */
+  edgeKind: Uint8Array;
+  /** How many edges of each kind, for the legend. */
+  linkCounts: { peer: number; backward: number };
   /** Total hadiths represented. */
   hadithCount: number;
 }
@@ -37,11 +57,20 @@ const GRADE_INDEX = new Map<NarratorGrade, number>(
   NARRATOR_GRADES.map((grade, i) => [grade, i]),
 );
 
-/** Median without sorting cost mattering — depth lists are short. */
-function median(values: number[]): number {
-  values.sort((a, b) => a - b);
-  return values[Math.floor(values.length / 2)];
-}
+/**
+ * Spread within one generation, as a fraction of the gap to the next. Kept
+ * below 1 so a generation never bleeds into the one beneath it.
+ */
+const SUBLEVEL_SPREAD = 0.66;
+
+/**
+ * How close in position two narrators must be to count as contemporaries.
+ * Narrators with no recorded death year all sit mid-band, so ties are common
+ * and mean only that nothing separates them.
+ */
+const SAME_AGE = 0.02;
+
+
 
 export function buildGraph(
   selection: { book: BookFile; hadiths: HadithRecord[] }[],
@@ -49,6 +78,7 @@ export function buildGraph(
 ): GraphData {
   const ids: string[] = [];
   const index = new Map<string, number>();
+  /** Only a fallback now that generations come from the registry. */
   const depths: number[][] = [];
   const weights: number[] = [];
 
@@ -96,25 +126,53 @@ export function buildGraph(
   const grade = new Uint8Array(count);
 
   for (let i = 0; i < count; i++) {
-    // The median keeps one unusual chain from lifting a narrator out of the
-    // generation he sits in everywhere else.
-    gen[i] = depths[i].length ? median(depths[i]) : 0;
-    genExact[i] = depths[i].length
-      ? depths[i].reduce((sum, d) => sum + d, 0) / depths[i].length
-      : 0;
-    weight[i] = weights[i];
     const entry = narrators.get(ids[i]);
+    // Fall back to the shortest position seen here only for a narrator the
+    // registry has never met, which should not happen.
+    gen[i] = entry?.gen ?? (depths[i].length ? Math.min(...depths[i]) : 0);
+    genExact[i] = gen[i] + (entry?.sub ?? 0.5) * SUBLEVEL_SPREAD;
+    weight[i] = weights[i];
     grade[i] = GRADE_INDEX.get(entry?.grade ?? 'unknown') ?? GRADE_INDEX.get('unknown')!;
   }
 
   const edges = new Uint32Array(edgeWeights.size * 2);
   const edgeWeight = new Float32Array(edgeWeights.size);
+  const edgeKind = new Uint8Array(edgeWeights.size);
+  const linkCounts = { peer: 0, backward: 0 };
   let e = 0;
   for (const [key, value] of edgeWeights) {
-    edges[e * 2] = Math.floor(key / 4194304);
-    edges[e * 2 + 1] = key % 4194304;
+    const from = Math.floor(key / 4194304);
+    const to = key % 4194304;
+    edges[e * 2] = from;
+    edges[e * 2 + 1] = to;
     edgeWeight[e] = value;
+    // Compared at the finer position, not the whole-number band. Chain depth
+    // is coarser than the ṭabaqāt, so a father and his son often share a
+    // generation; ranking within it by death year still puts the son below,
+    // and that link is ordinary transmission rather than transmission between
+    // contemporaries. Only where age cannot separate them either does it read
+    // as a peer.
+    const drop = genExact[to] - genExact[from];
+    if (Math.abs(drop) <= SAME_AGE) {
+      edgeKind[e] = LINK_PEER;
+      linkCounts.peer++;
+    } else if (drop < 0) {
+      edgeKind[e] = LINK_BACKWARD;
+      linkCounts.backward++;
+    }
     e++;
   }
-  return { ids, index, gen, genExact, weight, grade, edges, edgeWeight, hadithCount };
+  return {
+    ids,
+    index,
+    gen,
+    genExact,
+    weight,
+    grade,
+    edges,
+    edgeWeight,
+    edgeKind,
+    linkCounts,
+    hadithCount,
+  };
 }

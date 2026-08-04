@@ -1,4 +1,4 @@
-import { GRADE_COLOR, GRADE_LABEL, PROPHET_ID } from '../corpus/types';
+import { GENERATION_SOURCE_LABEL, GRADE_COLOR, GRADE_LABEL, PROPHET_ID } from '../corpus/types';
 import { useStore } from '../state/store';
 
 function Row({ label, value }: { label: string; value?: string }) {
@@ -69,8 +69,16 @@ export function NarratorPanel() {
           value={bio?.gradeAr}
         />
         <Row
+          label="Generation"
+          value={
+            entry.gen === 0
+              ? 'the origin of every chain'
+              : `${entry.gen} — ${GENERATION_SOURCE_LABEL[entry.gf] ?? 'from the chains'}`
+          }
+        />
+        <Row
           label="In this corpus"
-          value={`${entry.n.toLocaleString()} ${entry.n === 1 ? 'chain' : 'chains'}, generation ${entry.gen}`}
+          value={`${entry.n.toLocaleString()} ${entry.n === 1 ? 'chain' : 'chains'}`}
         />
       </dl>
 

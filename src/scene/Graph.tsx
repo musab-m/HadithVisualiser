@@ -2,7 +2,7 @@ import { useFrame, type ThreeEvent } from '@react-three/fiber';
 import { useEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
 import { NARRATOR_GRADES, GRADE_COLOR } from '../corpus/types';
-import type { GraphData } from '../graph/build';
+import { LINK_BACKWARD, LINK_PEER, type GraphData } from '../graph/build';
 import type { LayoutResult } from '../state/store';
 
 interface Props {
@@ -16,6 +16,18 @@ interface Props {
 
 const GRADE_COLORS = NARRATOR_GRADES.map((grade) => new THREE.Color(GRADE_COLOR[grade]));
 const DIM = new THREE.Color('#1b2030');
+
+/**
+ * Links that do not run from an earlier generation to a later one get their own
+ * colour rather than the grade gradient, because what is interesting about them
+ * is the direction, not who the transmitters were.
+ */
+export const LINK_COLOR = {
+  peer: '#b98cf0',
+  backward: '#f0913c',
+};
+const PEER_COLOR = new THREE.Color(LINK_COLOR.peer);
+const BACKWARD_COLOR = new THREE.Color(LINK_COLOR.backward);
 
 /**
  * Additive glow behind each node. The quads are billboarded in the vertex
@@ -79,6 +91,15 @@ export function Graph({ graph, layout, hover, focus, onHover, onSelect }: Props)
       );
     }
   };
+
+  // The store pairs a layout with the graph it was built for, so this should
+  // never trip. It is here because the failure is silent when it does: indices
+  // still resolve, every narrator just draws at someone else's coordinates.
+  if (layout.positions.length !== count * 3) {
+    throw new Error(
+      `layout has ${layout.positions.length / 3} positions for ${count} nodes`,
+    );
+  }
 
   const glow = useMemo(glowMaterial, []);
   useEffect(() => () => glow.dispose(), [glow]);
@@ -150,10 +171,21 @@ export function Graph({ graph, layout, hover, focus, onHover, onSelect }: Props)
       }
       // Fade with how well travelled the link is, so the trunk routes read
       // brightly and the one-off transmissions stay as background texture.
+      const kind = graph.edgeKind[i];
+      const base = Math.min(0.05 + Math.log1p(graph.edgeWeight[i]) * 0.075, 0.42);
+      // Only a link running back up a generation gets a brightness floor, so it
+      // survives the wash of ordinary transmission around it. Same-generation
+      // links get the colour but not the emphasis: with generations bucketed to
+      // whole numbers, plenty of them are two adjacent layers rounding together
+      // rather than genuine transmission between contemporaries.
       const intensity =
-        Math.min(0.05 + Math.log1p(graph.edgeWeight[i]) * 0.075, 0.42) * density;
-      const from = GRADE_COLORS[graph.grade[a]];
-      const to = GRADE_COLORS[graph.grade[b]];
+        kind === LINK_BACKWARD
+          ? Math.max(base, 0.26) * Math.max(density, 0.5)
+          : base * density;
+      const from =
+        kind === LINK_PEER ? PEER_COLOR : kind === LINK_BACKWARD ? BACKWARD_COLOR : GRADE_COLORS[graph.grade[a]];
+      const to =
+        kind === LINK_PEER ? PEER_COLOR : kind === LINK_BACKWARD ? BACKWARD_COLOR : GRADE_COLORS[graph.grade[b]];
       colors[i * 6] = from.r * intensity;
       colors[i * 6 + 1] = from.g * intensity;
       colors[i * 6 + 2] = from.b * intensity;
