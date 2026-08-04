@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import type { BookFile, HadithRecord } from '../corpus/types';
 import { useStore } from '../state/store';
+import { TextSearch } from './TextSearch';
 
 function Stat({ value, label }: { value: string; label: string }) {
   return (
@@ -153,6 +154,8 @@ export function Sidebar() {
         <Stat value={(graph?.ids.length ?? 0).toLocaleString()} label="narrators" />
         <Stat value={((graph?.edges.length ?? 0) / 2).toLocaleString()} label="transmissions" />
       </div>
+
+      <TextSearch />
 
       {pinned.length ? (
         <section className="panel">

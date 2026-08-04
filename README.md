@@ -11,13 +11,35 @@ who heard from the layer above. The compilers — al-Bukhārī, Muslim, Mālik �
 the floor. Click any narrator to read their biography, the verdicts classical
 critics passed on them, who they heard from and taught, and the chains they carry.
 
-You can look at one hadith, a chapter, several collections, or everything at once.
+You can look at one hadith, a chapter, several collections, or everything at once —
+or search the text and see every chain that carries a given wording.
 
 ![The whole corpus: 49,821 chains through 8,204 narrators](docs/overview.png)
 
 | One narrator | Three chains |
 | --- | --- |
 | ![A narrator's biography](docs/narrator.png) | ![Three individual chains](docs/single-chain.png) |
+
+## Tracing a wording
+
+Search a phrase, in Arabic or English, and every hadith reporting it goes into the
+graph together. The count answers how many times the corpus records the statement
+being transmitted; the shape answers how independent those routes were.
+
+![Tracing a wording through the corpus](docs/trace-a-wording.png)
+
+`إنما الأعمال بالنيات` comes back as **21 reports across twelve collections** — five
+of them in al-Bukhari alone — and the picture shows why the hadith is called *gharīb*
+at its root: a single strand from ʿUmar down through four narrators before it fans
+out to every compiler.
+
+Matching is deliberately loose. A hadith qualifies on most of the query's words
+rather than all of them, because the same statement is transmitted with a word
+changed (`بالنية` for `بالنيات`, one translator's phrasing for another's), and
+demanding every term would hide exactly the corroborations the question is about.
+Adjacent word pairs are indexed too, which is what floats the exact wording to the
+top and lets the panel say how many carry the phrase itself rather than the words
+scattered.
 
 ---
 
@@ -68,7 +90,12 @@ unambiguous links are fixed first, then the biographical teacher/student records
 the ṭabaqa ordering, and death dates decide the rest. A chain that reaches the
 Prophet must end in a Companion, which alone rules out most namesakes.
 
-**3 — Draw.** The vertical axis is generation, taken from where a narrator actually
+**3 — Index.** `tools/ingest/search.ts` builds an inverted index over the text —
+single words, plus the adjacent pairs that recur — sharded so a query fetches a
+small slice rather than the whole thing. Arabic is folded first: vowel marks off,
+alef and ya and ta-marbuta normalised, the article and fused conjunctions stripped.
+
+**4 — Draw.** The vertical axis is generation, taken from where a narrator actually
 sits across every chain they appear in. Horizontal position is relaxed in a worker:
 nodes are pulled toward the people they transmit with and pushed off their
 neighbours. Node colour is the transmitter's grade in the rijal literature.
@@ -98,6 +125,7 @@ hadith's authenticity.**
 ```
 src/
   corpus/        the on-disk schema and a lazy loader for it
+  search/        the tokeniser (shared with the builder) and the query engine
   graph/         selection → graph, and the layout worker
   scene/         three.js rendering: instanced nodes, additive edges, glow
   ui/            selection sidebar, biography panel, hadith reader
@@ -105,6 +133,7 @@ tools/ingest/
   books.ts       the catalogue — add a collection here
   isnad/         Arabic normalisation and the chain parser
   rijal/         the narrator database and the name resolver
+  search.ts      the full-text index
   cli.ts         fetch → parse → identify → write
 public/data/     generated corpus (committed, so the site is deployable as-is)
 ```

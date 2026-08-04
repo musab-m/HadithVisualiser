@@ -8,6 +8,7 @@
  *   books/<slug>/text-K.json  the hadith texts, chunked, fetched when read
  *   narrators/index.json      lightweight registry: what the 3D graph needs
  *   narrators/bio-NN.json     sharded full biographies, fetched on demand
+ *   search/shard-K.json       inverted index over the text, fetched per query
  *
  * Chains and text are separate so the graph can open the whole corpus without
  * pulling tens of megabytes of prose. Adding a book only ever writes a new
@@ -52,8 +53,30 @@ export interface CorpusManifest {
   narratorCount: number;
   /** Number of narrator bio shards (`narrators/bio-0.json` … `bio-N.json`). */
   bioShards: number;
+  /** Full-text index, absent until the index has been built. */
+  search?: SearchSummary;
   books: BookSummary[];
   sources: SourceAttribution[];
+}
+
+export interface SearchSummary {
+  /** Number of `search/shard-K.json` files. */
+  shards: number;
+  /** Hadiths in the index — the ordinal space runs 0 … docs-1. */
+  docs: number;
+  /** Distinct terms indexed, single words and adjacent pairs together. */
+  terms: number;
+}
+
+/**
+ * One shard of the inverted index: term → the ordinals of the hadiths carrying
+ * it, delta-encoded and ascending, so the common case of a long posting list
+ * stores small numbers.
+ */
+export interface SearchShardFile {
+  formatVersion: number;
+  shard: number;
+  postings: Record<string, number[]>;
 }
 
 export interface SourceAttribution {
@@ -77,6 +100,12 @@ export interface BookSummary {
   chainCount: number;
   /** Unique narrators appearing in this book's chains. */
   narratorCount: number;
+  /**
+   * This book's first hadith in the corpus-wide ordinal numbering the search
+   * index uses. Assigned in manifest order and rewritten whenever the index is
+   * rebuilt, so the two can never disagree.
+   */
+  ordinalBase: number;
   /** Directory holding this book's artefacts, relative to the data root. */
   dir: string;
   /** Number of `text-K.json` chunks written for this book. */

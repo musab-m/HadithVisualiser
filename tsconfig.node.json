@@ -15,5 +15,5 @@
     "composite": true,
     "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.node.tsbuildinfo"
   },
-  "include": ["tools", "vite.config.ts", "src/corpus/types.ts"]
+  "include": ["tools", "vite.config.ts", "src/corpus/types.ts", "src/search/tokenise.ts"]
 }

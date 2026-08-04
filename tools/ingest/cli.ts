@@ -34,6 +34,7 @@ import { loadKunyaMap, loadRelativeMaps } from './isnad/maps.js';
 import { parseIsnad } from './isnad/parse.js';
 import { RijalDatabase } from './rijal/db.js';
 import { rebuildRegistry } from './registry.js';
+import { rebuildSearchIndex } from './search.js';
 
 const ROOT = fileURLToPath(new URL('../..', import.meta.url));
 const DATA_DIR = join(ROOT, 'public', 'data');
@@ -166,6 +167,7 @@ async function ingestBook(
     hadithCount: records.length,
     chainCount,
     narratorCount: narrators.size,
+    ordinalBase: 0,
     dir,
     textChunks: texts.length,
     bytes: 0,
@@ -286,13 +288,35 @@ async function main(): Promise<void> {
   );
   manifest.books.sort((a, b) => (a.authorDiedAH ?? 9999) - (b.authorDiedAH ?? 9999));
 
+  // The search index numbers hadiths across the whole corpus, so the bases
+  // have to be settled before it is built — and rewritten into the book files,
+  // which the app reads them from.
+  let ordinal = 0;
+  for (const book of manifest.books) {
+    book.ordinalBase = ordinal;
+    ordinal += book.hadithCount;
+    const path = join(DATA_DIR, book.dir, 'index.json');
+    const file = JSON.parse(readFileSync(path, 'utf8')) as BookFile;
+    if (file.ordinalBase !== book.ordinalBase) {
+      file.ordinalBase = book.ordinalBase;
+      writeJson(path, file);
+    }
+  }
+
   console.log('\n  Rebuilding narrator registry …');
   const { narratorCount, bioShards } = rebuildRegistry(DATA_DIR, manifest.books, db, kunya, normaliseKey);
+
+  console.log('  Rebuilding search index …');
+  const search = rebuildSearchIndex(DATA_DIR, manifest.books);
+  console.log(
+    `  ${search.terms.toLocaleString()} terms over ${search.docs.toLocaleString()} hadiths`,
+  );
 
   manifest.formatVersion = CORPUS_FORMAT_VERSION;
   manifest.generatedAt = new Date().toISOString();
   manifest.narratorCount = narratorCount;
   manifest.bioShards = bioShards;
+  manifest.search = search;
   manifest.sources = SOURCES;
   writeJson(join(DATA_DIR, 'manifest.json'), manifest);
 

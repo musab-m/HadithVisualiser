@@ -1,9 +1,15 @@
 /** Arabic text utilities shared by the isnad parser and the rijal matcher. */
 
-/** Combining marks: harakat, tanwin, superscript alef, Quranic annotation signs. */
+/**
+ * Combining marks: harakat, tanwin, superscript alef, Quranic annotation signs.
+ *
+ * Written as escapes rather than as the marks themselves. A range that slips
+ * here strips Arabic letters instead of vowel signs, and nothing announces it —
+ * names simply stop matching.
+ */
 const DIACRITICS =
-  /[ؐ-ًؚ-ٰٟۖ-ۜ۟-۪ۨ-ۭ]/g;
-const TATWEEL = /ـ/g;
+  /[\u0610-\u061A\u064B-\u065F\u0670\u06D6-\u06DC\u06DF-\u06E8\u06EA-\u06ED]/g;
+const TATWEEL = /\u0640/g;
 
 /** Strip vowel marks and the kashida used for typographic stretching. */
 export function stripDiacritics(text: string): string {

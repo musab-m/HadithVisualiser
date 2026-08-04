@@ -9,6 +9,7 @@ import type {
   NarratorIndexEntry,
 } from '../corpus/types';
 import { buildGraph, type GraphData } from '../graph/build';
+import { search as runTextSearch, type SearchResult } from '../search/client';
 import type { LayoutResponse } from '../graph/layout.worker';
 
 export interface LayoutResult {
@@ -31,6 +32,10 @@ interface State {
   activeChapters: Map<string, Set<number>>;
   /** Individually chosen hadiths. When non-empty these are the whole graph. */
   pinned: string[];
+  /** The wording being traced, and every hadith reporting it. */
+  textQuery: string;
+  matches?: SearchResult;
+  searching: boolean;
 
   graph?: GraphData;
   layout?: LayoutResult;
@@ -51,6 +56,8 @@ interface State {
   unpin: (hadithId: string) => void;
   clearPins: () => void;
   setPins: (ids: string[]) => void;
+  runSearch: (query: string) => Promise<void>;
+  clearSearch: () => void;
   setFocus: (id?: string) => void;
   setHover: (id?: string) => void;
   read: (hadithId?: string) => Promise<void>;
@@ -69,13 +76,16 @@ function ensureWorker(): Worker {
 export const useStore = create<State>((set, get) => {
   /** Rebuild the graph from the current selection and lay it out. */
   const recompute = () => {
-    const { books, narrators, activeBooks, activeChapters, pinned } = get();
+    const { books, narrators, activeBooks, activeChapters, pinned, matches } = get();
     if (!books.size) return;
 
     const selection: { book: BookFile; hadiths: HadithRecord[] }[] = [];
 
-    if (pinned.length) {
-      const wanted = new Set(pinned);
+    // A hadith picked by hand beats a search, which beats whole collections.
+    const explicit = pinned.length ? pinned : matches?.ids;
+
+    if (explicit?.length) {
+      const wanted = new Set(explicit);
       for (const book of books.values()) {
         const hadiths = book.hadiths.filter((h) => wanted.has(h.id));
         if (hadiths.length) selection.push({ book, hadiths });
@@ -119,6 +129,8 @@ export const useStore = create<State>((set, get) => {
     activeBooks: new Set(),
     activeChapters: new Map(),
     pinned: [],
+    textQuery: '',
+    searching: false,
     bios: new Map(),
     texts: new Map(),
     laying: false,
@@ -151,7 +163,7 @@ export const useStore = create<State>((set, get) => {
       const activeBooks = new Set(get().activeBooks);
       if (activeBooks.has(slug)) activeBooks.delete(slug);
       else activeBooks.add(slug);
-      set({ activeBooks, pinned: [] });
+      set({ activeBooks, pinned: [], matches: undefined, textQuery: '' });
       recompute();
     },
 
@@ -160,6 +172,8 @@ export const useStore = create<State>((set, get) => {
         activeBooks: on ? new Set(get().books.keys()) : new Set(),
         activeChapters: new Map(),
         pinned: [],
+        matches: undefined,
+        textQuery: '',
       });
       recompute();
     },
@@ -172,14 +186,14 @@ export const useStore = create<State>((set, get) => {
       activeChapters.set(slug, chapters);
       const activeBooks = new Set(get().activeBooks);
       if (chapters.size) activeBooks.add(slug);
-      set({ activeChapters, activeBooks, pinned: [] });
+      set({ activeChapters, activeBooks, pinned: [], matches: undefined, textQuery: '' });
       recompute();
     },
 
     clearChapters(slug) {
       const activeChapters = new Map(get().activeChapters);
       activeChapters.delete(slug);
-      set({ activeChapters, pinned: [] });
+      set({ activeChapters, pinned: [], matches: undefined, textQuery: '' });
       recompute();
     },
 
@@ -201,6 +215,31 @@ export const useStore = create<State>((set, get) => {
 
     setPins(ids) {
       set({ pinned: ids });
+      recompute();
+    },
+
+    async runSearch(query) {
+      const { manifest, books } = get();
+      set({ textQuery: query });
+      if (!manifest?.search || !query.trim()) {
+        set({ matches: undefined, searching: false });
+        recompute();
+        return;
+      }
+      set({ searching: true });
+      try {
+        const matches = await runTextSearch(query, manifest.search, books);
+        // A query the user has already moved on from must not land.
+        if (get().textQuery !== query) return;
+        set({ matches, searching: false });
+        recompute();
+      } catch {
+        set({ searching: false, matches: undefined });
+      }
+    },
+
+    clearSearch() {
+      set({ textQuery: '', matches: undefined, searching: false });
       recompute();
     },
 
