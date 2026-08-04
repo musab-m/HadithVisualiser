@@ -45,6 +45,27 @@ rather than the words scattered through them — 97 hadiths mention that wording
 The layout is built for a phone as well as a desktop: the panel becomes a sheet
 that opens from the top bar, so the graph is never fighting it for the screen.
 
+## Isolating a narrator
+
+Right-click a narrator — long-press on a phone — for **only the chains through
+this narrator**. The graph is rebuilt from the hadiths whose chain actually runs
+through them, which is the only way to read a busy transmitter: at corpus scale
+ʿĀʾisha is a bright knot with three thousand lines through it, and no amount of
+rotating separates the chains that are hers from the ones passing nearby.
+
+It stacks. Isolate on a second narrator and only the chains carrying *both*
+survive, which answers a question the whole graph cannot: whether these two ever
+stood on the same isnad. ʿAbd al-Raḥmān b. Samura and Muʿādh b. Jabal, on 32 and
+several hundred chains respectively, share exactly one.
+
+Isolation is a lens over whatever is already selected rather than a selection of
+its own, so it composes with the collections and the search: *these chains, for
+this wording, in these two books, through this man.*
+
+The view survives a refresh. What is stored is the question — the query, the
+book slugs, the narrators being isolated on — never the hadiths it matched, so
+a saved view stays valid when a collection is re-ingested and the ids move.
+
 ---
 
 ## Running it
@@ -204,7 +225,8 @@ src/
   search/        the tokeniser (shared with the builder) and the query engine
   graph/         selection → graph, and the layout worker
   scene/         three.js rendering: instanced nodes, additive edges, glow
-  ui/            selection sidebar, biography panel, hadith reader
+  state/         the store, and what of it survives a refresh
+  ui/            selection sidebar, biography panel, hadith reader, node menu
 tools/ingest/
   books.ts       the catalogue — add a collection here
   isnad/         Arabic normalisation and the chain parser

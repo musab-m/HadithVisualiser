@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { loadBio, loadBook, loadManifest, loadNarratorIndex, loadText } from '../corpus/loader';
+import { collectorId, PROPHET_ID } from '../corpus/types';
 import type {
   BookFile,
   CorpusManifest,
@@ -8,6 +9,7 @@ import type {
   NarratorBio,
   NarratorIndexEntry,
 } from '../corpus/types';
+import { loadView, saveView } from './persist';
 import { buildGraph, type GraphData } from '../graph/build';
 import { search as runTextSearch, type SearchResult } from '../search/client';
 import type { LayoutBand, LayoutResponse } from '../graph/layout.worker';
@@ -39,6 +41,19 @@ interface State {
   searching: boolean;
   /** Narrow a search to the reports carrying the query as a phrase. */
   phraseOnly: boolean;
+  /**
+   * Narrators every drawn chain has to run through.
+   *
+   * A lens over whatever else is selected rather than a selection of its own,
+   * so it composes: the chains for this wording, in these two collections,
+   * that passed through this man. With more than one narrator the chain has to
+   * carry all of them, which is how you ask whether a route between two people
+   * exists at all.
+   */
+  isolated: string[];
+
+  /** The narrator menu, and where on screen it was opened. */
+  menu?: { id: string; x: number; y: number };
 
   /** The current selection's graph. Drives the counts in the sidebar. */
   graph?: GraphData;
@@ -72,6 +87,11 @@ interface State {
   runSearch: (query: string) => Promise<void>;
   clearSearch: () => void;
   setPhraseOnly: (on: boolean) => void;
+  isolate: (narratorId: string, alsoThrough?: boolean) => void;
+  release: (narratorId: string) => void;
+  clearIsolation: () => void;
+  openMenu: (narratorId: string, x: number, y: number) => void;
+  closeMenu: () => void;
   setFocus: (id?: string) => void;
   setHover: (id?: string) => void;
   read: (hadithId?: string) => Promise<void>;
@@ -105,11 +125,44 @@ function abandonLayout(): void {
   running = false;
 }
 
+/**
+ * Whether a hadith's drawn path runs through every one of `through`.
+ *
+ * The path is the Prophet, the chain, then the compiler — the same three parts
+ * the graph is built from, so isolating on a node always keeps the chains that
+ * visibly touch it. The Prophet and the compiler are not in the stored chain
+ * but are on every path that book contributes, and are matched accordingly.
+ */
+function passesThrough(hadith: HadithRecord, bookSlug: string, through: string[]): boolean {
+  const collector = collectorId(bookSlug);
+  return through.every(
+    (id) => id === PROPHET_ID || id === collector || hadith.chain.includes(id),
+  );
+}
+
 export const useStore = create<State>((set, get) => {
+  /** Write the current question to storage, so a refresh does not lose it. */
+  const remember = () => {
+    const { activeBooks, activeChapters, pinned, textQuery, phraseOnly, isolated, focus } = get();
+    saveView({
+      books: [...activeBooks],
+      chapters: [...activeChapters]
+        .filter(([, ids]) => ids.size)
+        .map(([slug, ids]) => [slug, [...ids]] as [string, number[]]),
+      pinned,
+      query: textQuery,
+      phraseOnly,
+      isolated,
+      focus,
+    });
+  };
+
   /** Rebuild the graph from the current selection and lay it out. */
   const recompute = () => {
-    const { books, narrators, activeBooks, activeChapters, pinned, matches, phraseOnly } = get();
+    const { books, narrators, activeBooks, activeChapters, pinned, matches, phraseOnly, isolated } =
+      get();
     if (!books.size) return;
+    remember();
 
     const selection: { book: BookFile; hadiths: HadithRecord[] }[] = [];
 
@@ -135,7 +188,19 @@ export const useStore = create<State>((set, get) => {
       }
     }
 
-    const graph = buildGraph(selection, narrators);
+    // Isolation applies last, over whatever the selection turned out to be, so
+    // it narrows a search and a set of collections alike instead of replacing
+    // them.
+    const drawn = isolated.length
+      ? selection
+          .map(({ book, hadiths }) => ({
+            book,
+            hadiths: hadiths.filter((h) => passesThrough(h, book.slug, isolated)),
+          }))
+          .filter(({ hadiths }) => hadiths.length)
+      : selection;
+
+    const graph = buildGraph(drawn, narrators);
     set({ graph, laying: true });
 
     const token = ++layoutToken;
@@ -175,6 +240,7 @@ export const useStore = create<State>((set, get) => {
     textQuery: '',
     searching: false,
     phraseOnly: false,
+    isolated: [],
     bios: new Map(),
     texts: new Map(),
     laying: false,
@@ -184,14 +250,46 @@ export const useStore = create<State>((set, get) => {
         const [manifest, narrators] = await Promise.all([loadManifest(), loadNarratorIndex()]);
         const loaded = await Promise.all(manifest.books.map((b) => loadBook(b.slug)));
         const books = new Map(loaded.map((book) => [book.slug, book]));
+
+        // Restore the last view, but only the parts the corpus still supports:
+        // a collection can be re-ingested or dropped between visits, and a
+        // stale slug would silently select nothing.
+        const saved = loadView();
+        const restored = saved?.books.filter((slug) => books.has(slug)) ?? [];
+        const chapters = new Map<string, Set<number>>();
+        for (const [slug, ids] of saved?.chapters ?? []) {
+          if (books.has(slug) && ids.length) chapters.set(slug, new Set(ids));
+        }
+        const known = new Set(narrators.keys());
+
         set({
           manifest,
           narrators,
           books,
-          activeBooks: new Set(books.keys()),
+          // An empty saved list means the viewer had turned everything off,
+          // which is worth honouring; no saved view at all means a first visit.
+          activeBooks: new Set(saved ? restored : books.keys()),
+          activeChapters: chapters,
+          pinned: saved?.pinned.filter((id) => books.has(id.split(':')[0])) ?? [],
+          isolated: saved?.isolated.filter((id) => known.has(id)) ?? [],
+          focus: saved?.focus && known.has(saved.focus) ? saved.focus : undefined,
           status: 'ready',
         });
-        recompute();
+
+        if (saved?.focus) get().setFocus(saved.focus);
+
+        // The hits themselves are not stored — they are whatever the index says
+        // today — so a restored query is simply run again. It recomputes on its
+        // own, which is why this branch does not.
+        if (saved?.query.trim()) {
+          void get()
+            .runSearch(saved.query)
+            .then(() => {
+              if (saved.phraseOnly) get().setPhraseOnly(true);
+            });
+        } else {
+          recompute();
+        }
       } catch (error) {
         set({
           status: 'error',
@@ -292,8 +390,36 @@ export const useStore = create<State>((set, get) => {
       recompute();
     },
 
+    isolate(narratorId, alsoThrough = false) {
+      const current = get().isolated;
+      const isolated = alsoThrough
+        ? [...current.filter((id) => id !== narratorId), narratorId]
+        : [narratorId];
+      set({ isolated, menu: undefined });
+      recompute();
+    },
+
+    release(narratorId) {
+      set({ isolated: get().isolated.filter((id) => id !== narratorId), menu: undefined });
+      recompute();
+    },
+
+    clearIsolation() {
+      set({ isolated: [], menu: undefined });
+      recompute();
+    },
+
+    openMenu(narratorId, x, y) {
+      set({ menu: { id: narratorId, x, y } });
+    },
+
+    closeMenu() {
+      if (get().menu) set({ menu: undefined });
+    },
+
     setFocus(id) {
       set({ focus: id });
+      remember();
       const { manifest, bios } = get();
       if (!id || !manifest || bios.has(id)) return;
       void loadBio(id, manifest.bioShards).then((bio) => {

@@ -37,7 +37,12 @@ export interface GraphData {
    * year so the seniors of a generation sit above its juniors.
    */
   genExact: Float32Array;
-  /** How many selected hadiths pass through this narrator. */
+  /**
+   * How many selected hadiths pass through this narrator — hadiths, not
+   * appearances. A chain that names someone twice is still one hadith through
+   * them, and counting it twice would put the node's own figure at odds with
+   * what isolating on them actually draws.
+   */
   weight: Float32Array;
   /** Index into NARRATOR_GRADES. */
   grade: Uint8Array;
@@ -81,6 +86,8 @@ export function buildGraph(
   /** Only a fallback now that generations come from the registry. */
   const depths: number[][] = [];
   const weights: number[] = [];
+  /** The last hadith counted against each node, so none is counted twice. */
+  const counted: number[] = [];
 
   const nodeFor = (id: string): number => {
     let at = index.get(id);
@@ -90,6 +97,7 @@ export function buildGraph(
       ids.push(id);
       depths.push([]);
       weights.push(0);
+      counted.push(-1);
     }
     return at;
   };
@@ -101,13 +109,16 @@ export function buildGraph(
     const collector = collectorId(book.slug);
     for (const hadith of hadiths) {
       if (!hadith.chain.length) continue;
-      hadithCount++;
+      const ordinal = hadithCount++;
       const path = [PROPHET_ID, ...hadith.chain, collector];
       let previous = -1;
       path.forEach((id, depth) => {
         const node = nodeFor(id);
         depths[node].push(depth);
-        weights[node]++;
+        if (counted[node] !== ordinal) {
+          counted[node] = ordinal;
+          weights[node]++;
+        }
         if (previous >= 0 && previous !== node) {
           // Pack the pair into one number: 2^22 node ids keeps the key inside
           // the exactly-representable integer range.
