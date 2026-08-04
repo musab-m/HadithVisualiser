@@ -24,6 +24,7 @@ import {
   CORPUS_FORMAT_VERSION,
 } from '../../src/corpus/types.js';
 import { findBook } from './books.js';
+import { assignGenerations, type GenerationResult } from './generations.js';
 import type { KunyaEntry } from './isnad/maps.js';
 import type { RijalDatabase } from './rijal/db.js';
 import { writeJson } from './emit.js';
@@ -87,11 +88,19 @@ export function rebuildRegistry(
     if (entry.hadiths.length < MAX_BIO_HADITHS) entry.hadiths.push(hadithId);
   };
 
+  const chains: { path: string[]; toProphet: boolean }[] = [];
+
   for (const summary of books) {
     const book = JSON.parse(
       readFileSync(join(dataDir, summary.dir, 'index.json'), 'utf8'),
     ) as BookFile;
     for (const hadith of book.hadiths) {
+      if (hadith.chain.length) {
+        chains.push({
+          path: [PROPHET_ID, ...hadith.chain, collectorId(book.slug)],
+          toProphet: hadith.toProphet,
+        });
+      }
       if (!hadith.chain.length) continue;
       record(PROPHET_ID, 0, hadith.id, book.slug);
       hadith.chain.forEach((id, i) => record(id, i + 1, hadith.id, book.slug));
@@ -110,6 +119,25 @@ export function rebuildRegistry(
     }
   }
 
+  // Generations are settled across the whole corpus before anything is
+  // written, so every book agrees on where a narrator stands.
+  const tabaqa = new Map<string, number>();
+  const died = new Map<string, number>();
+  for (const id of acc.keys()) {
+    if (!id.startsWith('r')) continue;
+    const profile = db.get(Number(id.slice(1)));
+    if (!profile) continue;
+    if (profile.tabaqa != null) tabaqa.set(id, profile.tabaqa);
+    if (profile.diedAH != null) died.set(id, profile.diedAH);
+  }
+  const generations = assignGenerations({ chains, tabaqa, died });
+  generations.gen.set(PROPHET_ID, 0);
+  generations.source.set(PROPHET_ID, 'chains');
+  console.log(
+    `  generations: ${generations.counts.chains} from chains, ${generations.counts.tabaqa} from ṭabaqa, ` +
+      `${generations.counts.inferred} inferred, ${generations.counts.position} by position`,
+  );
+
   const shards = shardCount(acc.size);
   const index: NarratorIndexEntry[] = [];
   const bios: NarratorBioShard[] = Array.from({ length: shards }, (_, shard) => ({
@@ -119,7 +147,7 @@ export function rebuildRegistry(
   }));
 
   for (const entry of acc.values()) {
-    const { indexEntry, bio } = describe(entry, db, kunya, normaliseKey);
+    const { indexEntry, bio } = describe(entry, db, kunya, normaliseKey, generations);
     index.push(indexEntry);
     bios[bioShardFor(entry.id, shards)].bios[entry.id] = bio;
   }
@@ -174,15 +202,28 @@ function describe(
   db: RijalDatabase,
   kunya: Map<string, KunyaEntry>,
   normaliseKey: (s: string) => string,
+  generations: GenerationResult,
 ): { indexEntry: NarratorIndexEntry; bio: NarratorBio } {
-  const gen = median(entry.depths);
+  const gen = generations.gen.get(entry.id) ?? median(entry.depths);
+  const gf = generations.source.get(entry.id) ?? 'position';
+  const sub = generations.sub.get(entry.id) ?? 0.5;
   const books: Record<string, number> = {};
   for (const [slug, count] of entry.books) books[slug] = count;
   const base = { id: entry.id, hadiths: entry.hadiths, books, verdicts: [] as NarratorBio['verdicts'] };
 
   if (entry.id === PROPHET_ID) {
     return {
-      indexEntry: { id: entry.id, ar: 'النبي ﷺ', en: 'The Prophet Muhammad ﷺ', grade: 'companion', gen: 0, n: entry.total, r: true },
+      indexEntry: {
+        id: entry.id,
+        ar: 'النبي ﷺ',
+        en: 'The Prophet Muhammad ﷺ',
+        grade: 'companion',
+        gen: 0,
+        gf: 'chains',
+        sub: 0,
+        n: entry.total,
+        r: true,
+      },
       bio: {
         ...base,
         fullNameAr: 'محمد بن عبد الله ﷺ',
@@ -203,6 +244,8 @@ function describe(
         en: book?.authorEn ?? slug,
         grade: 'reliable',
         gen,
+        gf,
+        sub,
         n: entry.total,
         r: true,
       },
@@ -232,6 +275,8 @@ function describe(
           en: kunyaHit?.en,
           grade: profile.grade,
           gen,
+          gf,
+          sub,
           d: profile.diedAH,
           n: entry.total,
           r: true,
@@ -271,6 +316,8 @@ function describe(
       en: kunyaHit?.en,
       grade: 'unknown' as NarratorGrade,
       gen,
+      gf,
+      sub,
       n: entry.total,
       r: false,
     },

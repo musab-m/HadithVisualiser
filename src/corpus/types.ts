@@ -192,10 +192,15 @@ export interface NarratorIndexEntry {
   en?: string;
   grade: NarratorGrade;
   /**
-   * Tabaqa (generation layer), 0 = the Prophet, 1 = companions, rising with
-   * distance. Drives the vertical axis of the 3D layout.
+   * Generation: 0 the Prophet, 1 the Companions, rising with distance. Settled
+   * once for the whole corpus at ingest, so a narrator does not move when the
+   * selection changes. Drives the vertical axis of the 3D layout.
    */
   gen: number;
+  /** What settled it — see GENERATION_SOURCE_LABEL. */
+  gf: GenerationSource;
+  /** Position within the generation, 0 (senior) to 1 (junior), by death year. */
+  sub: number;
   /** Death year in hijri, when known. */
   d?: number;
   /** Number of ingested hadiths this narrator appears in. */
@@ -205,6 +210,16 @@ export interface NarratorIndexEntry {
   /** Set when most appearances were a close call between similar profiles. */
   amb?: boolean;
 }
+
+/** How a narrator's generation was arrived at. */
+export type GenerationSource = 'chains' | 'tabaqa' | 'inferred' | 'position';
+
+export const GENERATION_SOURCE_LABEL: Record<GenerationSource, string> = {
+  chains: 'from the chains he appears in',
+  tabaqa: "from Ibn Ḥajar's ṭabaqa",
+  inferred: 'from the generations of those he transmitted with',
+  position: 'from his position in chains that do not reach the Prophet',
+};
 
 export interface NarratorIndexFile {
   formatVersion: number;

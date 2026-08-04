@@ -147,13 +147,23 @@ unambiguous links are fixed first, then the biographical teacher/student records
 the ṭabaqa ordering, and death dates decide the rest. A chain that reaches the
 Prophet must end in a Companion, which alone rules out most namesakes.
 
-**3 — Index.** `tools/ingest/search.ts` builds an inverted index over the text —
+**3 — Place.** `tools/ingest/generations.ts` settles every narrator's
+generation once, for the whole corpus, from three sources in order of what can
+be trusted for a given man: his own chains where there are enough of them, Ibn
+Ḥajar's ṭabaqa where they are thin, and the generations of the people either
+side of him where there is neither. The ṭabaqāt are calibrated against the
+chains rather than assumed — the twelve of the Taqrīb track chain depth
+closely — and act as a *floor*, since an elided link can only ever make a
+narrator look earlier than he was. Each narrator records which of the three
+placed him. Within a generation they are ranked by death year, so the seniors
+sit above the juniors.
+
+**4 — Index.** `tools/ingest/search.ts` builds an inverted index over the text —
 single words, plus the adjacent pairs that recur — sharded so a query fetches a
 small slice rather than the whole thing. Arabic is folded first: vowel marks off,
 alef and ya and ta-marbuta normalised, the article and fused conjunctions stripped.
 
-**4 — Draw.** The vertical axis is generation, taken from where a narrator actually
-sits across every chain they appear in. Horizontal position is relaxed in a worker:
+**5 — Draw.** The vertical axis is that generation. Horizontal position is relaxed in a worker:
 nodes are pulled toward the people they transmit with and pushed off their
 neighbours. Node colour is the transmitter's grade in the rijal literature.
 
@@ -190,6 +200,7 @@ tools/ingest/
   books.ts       the catalogue — add a collection here
   isnad/         Arabic normalisation and the chain parser
   rijal/         the narrator database and the name resolver
+  generations.ts placing every narrator in a generation
   search.ts      the full-text index
   cli.ts         fetch → parse → identify → write
 public/data/     generated corpus (committed, so the site is deployable as-is)
