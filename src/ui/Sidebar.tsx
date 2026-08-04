@@ -126,7 +126,7 @@ function HadithSearch() {
   );
 }
 
-export function Sidebar() {
+export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   const manifest = useStore((s) => s.manifest);
   const books = useStore((s) => s.books);
   const activeBooks = useStore((s) => s.activeBooks);
@@ -141,7 +141,13 @@ export function Sidebar() {
   const allOn = books.size > 0 && activeBooks.size === books.size;
 
   return (
-    <aside className="sidebar">
+    <aside className="sidebar" onClickCapture={(e) => {
+      // On a phone the sheet covers the graph, so anything that changes what
+      // is drawn should hand the screen back to it.
+      if ((e.target as HTMLElement).closest('.picker__result, .found__hit, .found__only')) {
+        onNavigate?.();
+      }
+    }}>
       <header className="sidebar__head">
         <h1 className="sidebar__title">
           Isnād
