@@ -18,8 +18,14 @@ export function Isolation() {
 
   return (
     <div className="isolation">
+      {/* Two phrasings for one thing: the bar sits over the apex of the graph,
+          and on a phone the full sentence wraps it onto a second line and
+          across the Prophet's label. */}
       <span className="isolation__label">
-        {isolated.length > 1 ? 'only the chains through all of' : 'only the chains through'}
+        <span className="isolation__long">
+          {isolated.length > 1 ? 'only the chains through all of' : 'only the chains through'}
+        </span>
+        <span className="isolation__short">only through</span>
       </span>
       <ul className="isolation__who">
         {isolated.map((id) => (
@@ -41,7 +47,8 @@ export function Isolation() {
           : 'nothing in this selection'}
       </span>
       <button className="isolation__clear" onClick={clearIsolation}>
-        show everything
+        <span className="isolation__long">show everything</span>
+        <span className="isolation__short">show all</span>
       </button>
     </div>
   );

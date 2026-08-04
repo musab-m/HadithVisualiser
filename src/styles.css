@@ -1347,6 +1347,11 @@ button {
 .isolation__label {
   color: var(--ink-faint);
   letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+.isolation__short {
+  display: none;
 }
 
 .isolation__who {
@@ -1497,8 +1502,8 @@ button {
     display: none;
   }
 
-  /* Clear of the top bar, and a bar rather than a pill — the names alone can
-     be wider than the screen. */
+  /* Clear of the top bar, and kept to one line: it sits over the apex of the
+     graph, and a second line lands on the Prophet's label. */
   .isolation {
     top: calc(max(0.7rem, env(safe-area-inset-top)) + 2.9rem);
     left: 0.6rem;
@@ -1506,9 +1511,55 @@ button {
     transform: none;
     max-width: none;
     justify-content: center;
+    gap: 0.35rem 0.4rem;
     border-radius: 12px;
-    padding: 0.5rem 0.6rem;
-    font-size: 0.66rem;
+    padding: 0.35rem 0.45rem;
+    font-size: 0.62rem;
+  }
+
+  .isolation__long {
+    display: none;
+  }
+
+  .isolation__short {
+    display: inline;
+  }
+
+  /* Some of these names are a full nasab. The chip is what yields — so the
+     count and the way out always survive — but only down to a floor: two long
+     names squeezed onto one line truncate to stubs, and a bar that no longer
+     says who you narrowed to is worse than a bar two lines tall. Past the
+     floor it wraps instead.
+
+     Truncation needs every box between the bar and the text to be able to
+     shrink; one `min-width: auto` left in the chain and the chip overflows and
+     paints across the count. */
+  .isolation__who {
+    min-width: 0;
+  }
+
+  .isolation__who li {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .isolation__ar {
+    min-width: 6rem;
+    max-width: 9rem;
+    flex: 0 1 auto;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .isolation__count,
+  .isolation__label {
+    flex: 0 0 auto;
+  }
+
+  .isolation__clear {
+    white-space: nowrap;
+    padding: 0.25rem 0.5rem;
   }
 
   /* A menu opened by a finger needs a finger-sized target. */
