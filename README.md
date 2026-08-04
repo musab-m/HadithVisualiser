@@ -61,8 +61,24 @@ The generated corpus is committed, so a deploy is just `npm ci && npm run build`
 uses relative asset paths, so it works from a domain root or a project subpath
 without configuration.
 
-A `Deploy` workflow is included: enable Pages under *Settings → Pages → Source:
-GitHub Actions* and every push to `main` publishes.
+**Cloudflare Pages** is the recommended host. Connect the repository, set the build
+command to `npm run build` and the output directory to `dist`. It is the only free
+tier without a monthly bandwidth cap, it serves Brotli, and it deploys private
+repositories.
+
+To publish without giving any third party access to the repository, upload the
+build directly instead:
+
+```bash
+npm run build
+npx wrangler pages deploy dist
+```
+
+**GitHub Pages** is free only for public repositories — a private repository needs
+a paid plan. If this repository is public, enable *Settings → Pages → Source:
+GitHub Actions* and the included `Deploy` workflow publishes on every push to
+`main`. Nothing in the corpus prevents that: every source it is built from is
+open, and the generated data carries no private material.
 
 What the site actually costs to serve:
 
@@ -75,11 +91,17 @@ What the site actually costs to serve:
 | Every byte, if one visitor fetched the whole corpus | 27 MB |
 
 245 files, 110 MB on disk, largest single file under 1 MB — inside the limits of
-every major free static host. Cloudflare Pages is the best fit if the site gets
-shared widely, being the only one of them without a monthly bandwidth cap;
-GitHub Pages is the least setup, since the repository is already there. Netlify
-works equally well. Vercel's free tier forbids commercial use, which may or may
-not matter.
+every major free static host, including Cloudflare's 20,000-file cap and GitHub's
+1 GB site limit.
+
+| Host | Free with a private repo | Bandwidth |
+| --- | --- | --- |
+| Cloudflare Pages | yes | unmetered |
+| Netlify | yes | 100 GB/month |
+| Vercel | yes, but the free tier forbids commercial use | 100 GB/month |
+| GitHub Pages | no — public repositories only | 100 GB/month (soft) |
+
+At roughly 2–3 MB per session, 100 GB is on the order of 35,000 visits a month.
 
 ### The catalogue
 
