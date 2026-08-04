@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useStore } from '../state/store';
+import { HadithRefs } from './HadithRefs';
 
 /**
  * Search the wording of the reports rather than their numbering, and put every
@@ -15,8 +16,6 @@ export function TextSearch() {
   const textQuery = useStore((s) => s.textQuery);
   const runSearch = useStore((s) => s.runSearch);
   const clearSearch = useStore((s) => s.clearSearch);
-  const read = useStore((s) => s.read);
-  const pin = useStore((s) => s.pin);
   // Matches without a parsable isnad have nothing to draw, so the graph can
   // legitimately hold fewer hadiths than the search found.
   const drawn = useStore((s) => (s.matches ? (s.graph?.hadithCount ?? null) : null));
@@ -104,21 +103,7 @@ export function TextSearch() {
               single line.
             </p>
 
-            <ul className="found__list">
-              {matches.ids.slice(0, 40).map((id) => (
-                <li key={id}>
-                  <button className="found__hit" onClick={() => void read(id)}>
-                    {id}
-                  </button>
-                  <button className="found__only" onClick={() => pin(id)} title="Show only this chain">
-                    only
-                  </button>
-                </li>
-              ))}
-            </ul>
-            {matches.ids.length > 40 ? (
-              <p className="hint">and {(matches.ids.length - 40).toLocaleString()} more</p>
-            ) : null}
+            <HadithRefs key={textQuery} ids={matches.ids} onlyButton />
 
             {matches.unindexed.length ? (
               <p className="hint">
