@@ -163,10 +163,36 @@ export async function openNodeMenu(page: Page): Promise<boolean> {
   if (!box) return false;
   const x = box.x + box.width / 2;
   for (let y = box.y + box.height * 0.12; y < box.y + box.height * 0.9; y += 8) {
+    // The canvas covers the window, but panels and the legend sit over it — on
+    // a phone they cover most of it. Clicking where one of those is on top
+    // never reaches the scene, so skip those points rather than spending the
+    // scan on them.
+    const onCanvas = await page.evaluate(
+      ([px, py]) => document.elementFromPoint(px, py)?.tagName === 'CANVAS',
+      [x, y],
+    );
+    if (!onCanvas) continue;
+
     await page.mouse.click(x, y, { button: 'right' });
     if (await page.locator('.menu').count()) return true;
   }
   return false;
+}
+
+/** Give the scene the screen back, so nodes can be reached by pointer. */
+export async function showGraph(page: Page): Promise<void> {
+  const toggle = page.locator('.topbar__toggle');
+  if (!(await toggle.isVisible())) return;
+  if ((await toggle.innerText()).includes('view the graph')) await toggle.click();
+  await expect(page.locator('.app--controls')).toHaveCount(0);
+}
+
+/** Run a text search and wait for the graph to catch up with it. */
+export async function trace(page: Page, wording: string): Promise<void> {
+  await page.getByLabel('Search the text of the hadiths').fill(wording);
+  await page.getByRole('button', { name: 'trace' }).click();
+  await expect(page.locator('.found, .hint').first()).toBeVisible();
+  await settled(page);
 }
 
 /** Every button that is on screen and meant to be usable. */
