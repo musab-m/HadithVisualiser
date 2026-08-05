@@ -193,6 +193,41 @@ test.describe('the controls', () => {
     }
   });
 
+  test('kinds of report widen within a heading and narrow between them', async ({ app: page }) => {
+    await openSidebar(page);
+    const kinds = page.locator('.panel', { hasText: 'Kinds of report' });
+    const pick = (text: string) =>
+      page.locator('.kinds__list li', { hasText: text }).first().locator('.check__box').click();
+
+    // Every option carries the count it would give, so a filter can be judged
+    // before it is spent — and the count has to be the truth.
+    const stated = Number(
+      (await page.locator('.kinds__list li', { hasText: 'not traced to the Prophet' })
+        .first()
+        .locator('.kinds__n')
+        .innerText()).replace(/,/g, ''),
+    );
+    await pick('not traced to the Prophet');
+    await settled(page);
+    expect((await stats(page)).hadiths).toBe(stated);
+
+    // A second choice under the same heading widens: this or that.
+    const one = (await stats(page)).hadiths;
+    await pick('a short chain');
+    await settled(page);
+    const both = (await stats(page)).hadiths;
+    expect(both).toBeGreaterThanOrEqual(one);
+
+    // A choice under another heading narrows: this, and ruled weak.
+    await pick('weak');
+    await settled(page);
+    expect((await stats(page)).hadiths).toBeLessThanOrEqual(both);
+
+    await kinds.getByRole('button', { name: 'clear' }).click();
+    await settled(page);
+    expect((await stats(page)).hadiths).toBe(SMALL_BOOK_HADITHS);
+  });
+
   test('the legend explains itself and folds away', async ({ app: page }) => {
     const about = page.getByRole('button', { name: 'about the data' });
     await about.click();

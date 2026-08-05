@@ -66,6 +66,30 @@ The view survives a refresh. What is stored is the question — the query, the
 book slugs, the narrators being isolated on — never the hadiths it matched, so
 a saved view stays valid when a collection is re-ingested and the ids move.
 
+## Kinds of report
+
+The sidebar can narrow the corpus to kinds of hadith, from two groups that are
+not equally certain and are kept apart for that reason.
+
+**Al-Albānī's ruling** — sound, good, weak, denounced, fabricated — for the
+third of the corpus he ruled on. **The shape of the chain** — a senior narrating
+from a junior (*riwāyat al-akābir ʿan al-aṣāghir*), transmission between
+contemporaries (*riwāyat al-aqrān*), a short chain (*isnād ʿālī*), a chain not
+traced to the Prophet — read straight off the chain, so these are exact: they
+restate what the graph already draws.
+
+Choices under one heading widen the result, choices under different headings
+narrow it, and every option carries the count it would give against whatever
+else is already chosen.
+
+**Marfūʿ, mawqūf and maqṭūʿ are deliberately not offered.** They look derivable
+from whether the chain reached the Prophet and which generation it stopped at,
+and they are not. Measured against the cases where al-Albānī names the category
+himself, that derivation agreed 31 times in 96 — and on mawqūf, 3 times in 21.
+The parser can tell that the Prophet is *mentioned*; it cannot tell that the
+report is *attributed* to him, which is the whole distinction. A filter that
+wrong about a question that precise would be worse than none.
+
 ---
 
 ## Running it

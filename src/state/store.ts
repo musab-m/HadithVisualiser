@@ -11,6 +11,7 @@ import type {
 } from '../corpus/types';
 import { loadView, saveView } from './persist';
 import { buildGraph, type GraphData } from '../graph/build';
+import { ALL_KINDS, kindsOf, matchesKinds } from '../graph/kinds';
 import { search as runTextSearch, type SearchResult } from '../search/client';
 import type { LayoutBand, LayoutResponse } from '../graph/layout.worker';
 
@@ -55,6 +56,12 @@ interface State {
   /** The narrator menu, and where on screen it was opened. */
   menu?: { id: string; x: number; y: number };
 
+  /**
+   * Kinds of report to keep — rulings, chain shapes. Another lens over the
+   * selection, like isolation, rather than a selection of its own.
+   */
+  kinds: string[];
+
   /** The current selection's graph. Drives the counts in the sidebar. */
   graph?: GraphData;
   /**
@@ -97,6 +104,8 @@ interface State {
   runSearch: (query: string) => Promise<void>;
   clearSearch: () => void;
   setPhraseOnly: (on: boolean) => void;
+  toggleKind: (kind: string) => void;
+  clearKinds: () => void;
   isolate: (narratorId: string, alsoThrough?: boolean) => void;
   release: (narratorId: string) => void;
   clearIsolation: () => void;
@@ -106,6 +115,9 @@ interface State {
   setHover: (id?: string) => void;
   read: (hadithId?: string) => Promise<void>;
 }
+
+/** Filters from an older build are dropped rather than kept as dead state. */
+const KIND_IDS = new Set(ALL_KINDS.map((k) => k.id));
 
 let worker: Worker | undefined;
 let layoutToken = 0;
@@ -163,13 +175,14 @@ export const useStore = create<State>((set, get) => {
       query: textQuery,
       phraseOnly,
       isolated,
+      kinds: get().kinds,
       focus,
     });
   };
 
   /** Rebuild the graph from the current selection and lay it out. */
   const recompute = () => {
-    const { books, narrators, activeBooks, activeChapters, pinned, matches, phraseOnly, isolated } =
+    const { books, narrators, activeBooks, activeChapters, pinned, matches, phraseOnly, isolated, kinds } =
       get();
     if (!books.size) return;
     remember();
@@ -198,17 +211,23 @@ export const useStore = create<State>((set, get) => {
       }
     }
 
-    // Isolation applies last, over whatever the selection turned out to be, so
-    // it narrows a search and a set of collections alike instead of replacing
-    // them.
-    const drawn = isolated.length
-      ? selection
-          .map(({ book, hadiths }) => ({
-            book,
-            hadiths: hadiths.filter((h) => passesThrough(h, book.slug, isolated)),
-          }))
-          .filter(({ hadiths }) => hadiths.length)
-      : selection;
+    // Isolation and the kind filters apply last, over whatever the selection
+    // turned out to be, so they narrow a search and a set of collections alike
+    // instead of replacing them.
+    const chosen = new Set(kinds);
+    const drawn =
+      isolated.length || chosen.size
+        ? selection
+            .map(({ book, hadiths }) => ({
+              book,
+              hadiths: hadiths.filter(
+                (h) =>
+                  passesThrough(h, book.slug, isolated) &&
+                  matchesKinds(chosen, kindsOf(h, book.slug, narrators)),
+              ),
+            }))
+            .filter(({ hadiths }) => hadiths.length)
+        : selection;
 
     const graph = buildGraph(drawn, narrators);
     set({ graph, laying: true });
@@ -251,6 +270,7 @@ export const useStore = create<State>((set, get) => {
     searching: false,
     phraseOnly: false,
     isolated: [],
+    kinds: [],
     bios: new Map(),
     texts: new Map(),
     laying: false,
@@ -282,6 +302,7 @@ export const useStore = create<State>((set, get) => {
           activeChapters: chapters,
           pinned: saved?.pinned.filter((id) => books.has(id.split(':')[0])) ?? [],
           isolated: saved?.isolated.filter((id) => known.has(id)) ?? [],
+          kinds: saved?.kinds?.filter((k) => KIND_IDS.has(k)) ?? [],
           focus: saved?.focus && known.has(saved.focus) ? saved.focus : undefined,
           status: 'ready',
         });
@@ -397,6 +418,19 @@ export const useStore = create<State>((set, get) => {
 
     setPhraseOnly(on) {
       set({ phraseOnly: on });
+      recompute();
+    },
+
+    toggleKind(kind) {
+      const kinds = get().kinds.includes(kind)
+        ? get().kinds.filter((k) => k !== kind)
+        : [...get().kinds, kind];
+      set({ kinds });
+      recompute();
+    },
+
+    clearKinds() {
+      set({ kinds: [] });
       recompute();
     },
 
