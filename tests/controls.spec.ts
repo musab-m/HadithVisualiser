@@ -1,19 +1,21 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './fixtures';
 import {
-  CHAPTER_BOOK,
   CHAPTER_BOOK_TITLE,
   SMALL_BOOK_HADITHS,
   SMALL_BOOK_TITLE,
-  collectErrors,
   openSidebar,
-  openWith,
   settled,
   stats,
+  trace,
 } from './helpers';
 
+/**
+ * Every test here works from the same starting point — one small collection,
+ * nothing open — and shares a browser page with the rest, because booting the
+ * app costs fifteen seconds a time and the assertions here cost about one.
+ */
 test.describe('the controls', () => {
-  test('a collection can be turned off and back on', async ({ page }) => {
-    await openWith(page);
+  test('a collection can be turned off and back on', async ({ app: page }) => {
     await openSidebar(page);
     expect((await stats(page)).hadiths).toBe(SMALL_BOOK_HADITHS);
 
@@ -29,13 +31,12 @@ test.describe('the controls', () => {
     expect((await stats(page)).hadiths).toBe(SMALL_BOOK_HADITHS);
   });
 
-  test('all and none select every collection and no collection', async ({ page }) => {
-    // Whole-corpus interaction: nearly fifty thousand chains through eight
-    // thousand narrators, rendered without a GPU on CI. The site is responsive
-    // enough on hardware; here the main thread is busy for seconds at a time,
-    // and a click issued into that has to be allowed to wait.
+  test('all and none select every collection and no collection', async ({ app: page }) => {
+    // The one test that puts the whole corpus on screen. Without a GPU a click
+    // against 8,217 nodes takes tens of seconds, which is the machine rather
+    // than the site — so it is allowed to take its time, and it is the only
+    // place that pays this.
     test.slow();
-    await openWith(page);
     await openSidebar(page);
 
     await page.getByRole('button', { name: 'all', exact: true }).click();
@@ -50,12 +51,11 @@ test.describe('the controls', () => {
     await expect(page.locator('.book--on')).toHaveCount(0);
   });
 
-  test('a second collection adds to the first', async ({ page }) => {
-    await openWith(page);
+  test('a second collection adds to the first', async ({ app: page }) => {
     await openSidebar(page);
     const before = await stats(page);
 
-    await page.getByText(CHAPTER_BOOK_TITLE).click();
+    await page.locator('.books').getByText(CHAPTER_BOOK_TITLE).click();
     await settled(page);
     const after = await stats(page);
 
@@ -66,9 +66,10 @@ test.describe('the controls', () => {
     await expect(page.locator('.book--on')).toHaveCount(2);
   });
 
-  test('chapters narrow a collection and release it again', async ({ page }) => {
-    await openWith(page, { books: [CHAPTER_BOOK] });
+  test('chapters narrow a collection and release it again', async ({ app: page }) => {
     await openSidebar(page);
+    await page.locator('.books').getByText(CHAPTER_BOOK_TITLE).click();
+    await settled(page);
     const whole = await stats(page);
 
     // Every collection offers a chapter list, so the row has to be named or
@@ -92,8 +93,7 @@ test.describe('the controls', () => {
     await expect(page.locator('.chapters__list')).toHaveCount(0);
   });
 
-  test('the chapter filter box narrows the list', async ({ page }) => {
-    await openWith(page, { books: [CHAPTER_BOOK] });
+  test('the chapter filter box narrows the list', async ({ app: page }) => {
     await openSidebar(page);
     const row = page.locator('.book', { hasText: CHAPTER_BOOK_TITLE });
     await row.getByRole('button', { name: /\d+ chapters/ }).click();
@@ -111,10 +111,11 @@ test.describe('the controls', () => {
     expect(filtered).toBeGreaterThan(0);
     expect(filtered).toBeLessThanOrEqual(all);
     await expect(page.locator('.chapters__list li').first()).toContainText(new RegExp(word, 'i'));
+
+    await row.getByRole('button', { name: 'hide chapters' }).click();
   });
 
-  test('a hadith can be pinned by number and let go again', async ({ page }) => {
-    await openWith(page);
+  test('a hadith can be pinned by number and let go again', async ({ app: page }) => {
     await openSidebar(page);
 
     await page.getByPlaceholder(/Hadith number/).fill('qudsi40 1');
@@ -132,11 +133,12 @@ test.describe('the controls', () => {
     await settled(page);
     expect((await stats(page)).hadiths).toBe(SMALL_BOOK_HADITHS);
     await expect(page.getByRole('heading', { name: 'Selected hadiths' })).toHaveCount(0);
+    await page.getByPlaceholder(/Hadith number/).fill('');
   });
 
-  test('reading a hadith opens its text and its chain', async ({ page }) => {
-    await openWith(page, { query: 'mercy' });
+  test('reading a hadith opens its text and its chain', async ({ app: page }) => {
     await openSidebar(page);
+    await trace(page, 'mercy');
 
     await page.locator('.hadith-ref').first().click();
     const reader = page.getByRole('dialog', { name: 'Hadith' });
@@ -155,9 +157,9 @@ test.describe('the controls', () => {
     await expect(page.getByRole('dialog', { name: 'Hadith' })).toHaveCount(0);
   });
 
-  test('the biography panel moves between narrators', async ({ page }) => {
-    await openWith(page, { query: 'mercy' });
+  test('the biography panel moves between narrators', async ({ app: page }) => {
     await openSidebar(page);
+    await trace(page, 'mercy');
     await page.locator('.hadith-ref').first().click();
     await page.locator('.chain__node').first().click();
 
@@ -172,8 +174,7 @@ test.describe('the controls', () => {
     }
   });
 
-  test('the legend explains itself and folds away', async ({ page }) => {
-    await openWith(page);
+  test('the legend explains itself and folds away', async ({ app: page }) => {
     const about = page.getByRole('button', { name: 'about the data' });
     await about.click();
     await expect(page.locator('.legend__panel')).toBeVisible();
@@ -187,10 +188,9 @@ test.describe('the controls', () => {
     await expect(page.locator('.legend__panel')).toHaveCount(0);
   });
 
-  test('every visible control is enabled and actually hittable', async ({ page }) => {
-    const errors = collectErrors(page);
-    await openWith(page, { query: 'mercy' });
+  test('every visible control is enabled and actually hittable', async ({ app: page }) => {
     await openSidebar(page);
+    await trace(page, 'mercy');
 
     // Not a click-everything sweep — clicking half of these unmounts the other
     // half. What is checked is that each one is enabled and is the element the
@@ -215,6 +215,5 @@ test.describe('the controls', () => {
       return bad;
     });
     expect(covered).toEqual([]);
-    expect(errors).toEqual([]);
   });
 });

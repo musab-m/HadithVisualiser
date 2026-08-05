@@ -1,5 +1,6 @@
-import { expect, test } from '@playwright/test';
-import { SMALL_BOOK, applyView, openSidebar, openWith, settled, stats } from './helpers';
+import { test as fresh } from '@playwright/test';
+import { expect, test } from './fixtures';
+import { SMALL_BOOK, applyView, openWith, settled, showGraph, stats, trace } from './helpers';
 
 /**
  * The phone layout is a different arrangement rather than a narrower one: the
@@ -10,8 +11,17 @@ import { SMALL_BOOK, applyView, openSidebar, openWith, settled, stats } from './
 test.describe('on a phone', () => {
   test.skip(({ isMobile }) => !isMobile, 'phone layout only');
 
-  test('the sheet opens from the top bar and gives the screen back', async ({ page }) => {
-    await openWith(page);
+  /** One hadith drawn, so a narrator can be found by pressing on the scene. */
+  async function onlyOneChain(page: import('@playwright/test').Page) {
+    await page.locator('.topbar__toggle').click();
+    await page.getByPlaceholder(/Hadith number/).fill(`${SMALL_BOOK} 1`);
+    await page.locator('.picker__result').first().click();
+    await settled(page);
+    expect((await stats(page)).hadiths).toBe(1);
+    await showGraph(page);
+  }
+
+  test('the sheet opens from the top bar and gives the screen back', async ({ app: page }) => {
 
     const toggle = page.locator('.topbar__toggle');
     await expect(toggle).toBeVisible();
@@ -32,8 +42,7 @@ test.describe('on a phone', () => {
     await expect(toggle).toHaveText('search & collections');
   });
 
-  test('choosing a hadith closes the sheet so the chain is visible', async ({ page }) => {
-    await openWith(page);
+  test('choosing a hadith closes the sheet so the chain is visible', async ({ app: page }) => {
     await page.locator('.topbar__toggle').click();
 
     await page.getByPlaceholder(/Hadith number/).fill('qudsi40 1');
@@ -44,17 +53,16 @@ test.describe('on a phone', () => {
     expect((await stats(page)).hadiths).toBe(1);
   });
 
-  test('a long press opens the narrator menu; a tap does not', async ({ page, context }) => {
+  test('a long press opens the narrator menu; a tap does not', async ({ app: page }) => {
     // Dispatching a 90ms press does not mean the page receives one. With a
     // software renderer driving a 3D scene, the main thread stalls for seconds
     // and the release lands late enough to be a long press in good faith — so
     // wall-clock duration cannot separate a tap from a hold here at all. What
     // can be judged is the outcome: a press the site treated as a tap must not
     // have opened the menu as well.
-    await openWith(page, { pinned: [`${SMALL_BOOK}:1`] });
-    await settled(page);
+    await onlyOneChain(page);
 
-    const cdp = await context.newCDPSession(page);
+    const cdp = await page.context().newCDPSession(page);
     const hold = async (x: number, y: number, ms: number) => {
       await cdp.send('Input.dispatchTouchEvent', {
         type: 'touchStart',
@@ -114,9 +122,9 @@ test.describe('on a phone', () => {
     expect(menu.y + menu.height).toBeLessThanOrEqual(view.height + 1);
   });
 
-  test('whichever sheet was opened last is the one on top', async ({ page }) => {
-    await openWith(page, { query: 'mercy' });
+  test('whichever sheet was opened last is the one on top', async ({ app: page }) => {
     await page.locator('.topbar__toggle').click();
+    await trace(page, 'mercy');
 
     /** Is `selector` the element a tap at the centre of the screen would reach? */
     const onTop = (selector: string) =>
@@ -156,9 +164,9 @@ test.describe('on a phone', () => {
     }
   });
 
-  test('a scrolled biography can still be closed', async ({ page }) => {
-    await openWith(page, { query: 'mercy' });
+  test('a scrolled biography can still be closed', async ({ app: page }) => {
     await page.locator('.topbar__toggle').click();
+    await trace(page, 'mercy');
     await page.locator('.hadith-ref').first().click();
     await page.locator('.chain__node').first().click();
 
@@ -189,9 +197,9 @@ test.describe('on a phone', () => {
     await expect(page.locator('.detail')).toHaveCount(0);
   });
 
-  test('an open sheet stays inside the viewport the browser actually gives us', async ({ page }) => {
-    await openWith(page, { query: 'mercy' });
-    await openSidebar(page);
+  test('an open sheet stays inside the viewport the browser actually gives us', async ({ app: page }) => {
+    await page.locator('.topbar__toggle').click();
+    await trace(page, 'mercy');
 
     // Only sheets that are actually open: at rest the sidebar is parked below
     // the fold on purpose, and measuring it there says nothing.
@@ -221,7 +229,16 @@ test.describe('on a phone', () => {
     expect(await spill(), 'the biography runs past the bottom').toEqual([]);
   });
 
-  test('the isolation bar stays clear of the top bar and inside the screen', async ({ page }) => {
+});
+
+/**
+ * Needs a particular narrator isolated before the page is drawn, which means a
+ * saved view and a load of its own.
+ */
+fresh.describe('on a phone, from cold', () => {
+  fresh.skip(({ isMobile }) => !isMobile, 'phone layout only');
+
+  fresh('the isolation bar stays clear of the top bar and inside the screen', async ({ page }) => {
     await openWith(page);
     const id = await page.evaluate(async () => {
       const res = await fetch('data/narrators/index.json');
@@ -232,7 +249,7 @@ test.describe('on a phone', () => {
       named.sort((a, b) => b.ar.length - a.ar.length);
       return named[0]?.id ?? '';
     });
-    test.skip(!id, 'no narrator to isolate on');
+    fresh.skip(!id, 'no narrator to isolate on');
 
     await applyView(page, { books: ['bukhari'], isolated: [id] });
 
