@@ -1,5 +1,6 @@
-import { expect, test } from '@playwright/test';
-import { collectErrors, openWith, ready, stats } from './helpers';
+import { test as fresh } from '@playwright/test';
+import { expect, test } from './fixtures';
+import { collectErrors, openSidebar, ready, stats, trace } from './helpers';
 
 /**
  * The site is static, so "does it load" means the whole corpus loads: a
@@ -10,8 +11,8 @@ import { collectErrors, openWith, ready, stats } from './helpers';
  * one exercising the whole-corpus path — everything else starts from a small
  * selection to keep the suite quick.
  */
-test.describe('loading', () => {
-  test('a first visit draws the whole corpus', async ({ page }) => {
+fresh.describe('loading from cold', () => {
+  fresh('a first visit draws the whole corpus', async ({ page }) => {
     const errors = collectErrors(page);
     const response = await page.goto('/');
     expect(response?.status()).toBe(200);
@@ -29,7 +30,7 @@ test.describe('loading', () => {
     expect(errors).toEqual([]);
   });
 
-  test('the scene renders something rather than an empty canvas', async ({ page }) => {
+  fresh('the scene renders something rather than an empty canvas', async ({ page }) => {
     await page.goto('/');
     await ready(page);
 
@@ -49,10 +50,14 @@ test.describe('loading', () => {
     await expect(page.locator('.node-label').first()).toBeVisible({ timeout: 60_000 });
   });
 
-  // The layout of the page is the same whatever is selected, so these two run
-  // against one small collection rather than paying for the whole corpus.
-  test('the page is navigable without a mouse', async ({ page }) => {
-    await openWith(page);
+});
+
+/**
+ * The page has the same structure whatever is selected, so these share a page
+ * with the rest of the suite rather than each paying for a boot.
+ */
+test.describe('the page itself', () => {
+  test('the page is navigable without a mouse', async ({ app: page }) => {
 
     expect(await page.getAttribute('html', 'lang')).toBeTruthy();
     await expect(page).toHaveTitle(/isn/i);
@@ -79,8 +84,18 @@ test.describe('loading', () => {
     expect(reached.filter((tag) => tag === 'input' || tag === 'button').length).toBeGreaterThan(2);
   });
 
-  test('text has enough contrast against what is behind it', async ({ page }) => {
-    await openWith(page, { query: 'mercy' });
+  test('text has enough contrast against what is behind it', async ({ app: page }) => {
+    // Put as much of the interface on screen as one page can hold, so this
+    // judges the panels, the results, the reader and a biography rather than
+    // an empty sidebar.
+    // The legend goes first: once the reader is open it covers that corner.
+    await page.getByRole('button', { name: 'about the data' }).click();
+    await openSidebar(page);
+    await trace(page, 'mercy');
+    await page.locator('.hadith-ref').first().click();
+    await expect(page.locator('.reader')).toBeVisible();
+    await page.locator('.chain__node').first().click();
+    await expect(page.locator('.detail')).toBeVisible();
 
     const failures = await page.evaluate(() => {
       const parse = (colour: string): [number, number, number, number] => {
@@ -150,8 +165,7 @@ test.describe('loading', () => {
     expect(failures).toEqual([]);
   });
 
-  test('every control has a name a screen reader can announce', async ({ page }) => {
-    await openWith(page);
+  test('every control has a name a screen reader can announce', async ({ app: page }) => {
 
     const unnamed = await page.evaluate(() => {
       // Deliberately not `??` between these: an absent aria-labelledby yields
