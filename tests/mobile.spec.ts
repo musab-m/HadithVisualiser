@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { SMALL_BOOK, applyView, openWith, settled, stats } from './helpers';
+import { SMALL_BOOK, applyView, openSidebar, openWith, settled, stats } from './helpers';
 
 /**
  * The phone layout is a different arrangement rather than a narrower one: the
@@ -154,6 +154,71 @@ test.describe('on a phone', () => {
       await expect(page.locator('.detail')).toBeVisible();
       expect(await onTop('.detail')).toBe(true);
     }
+  });
+
+  test('a scrolled biography can still be closed', async ({ page }) => {
+    await openWith(page, { query: 'mercy' });
+    await page.locator('.topbar__toggle').click();
+    await page.locator('.hadith-ref').first().click();
+    await page.locator('.chain__node').first().click();
+
+    const detail = page.locator('.detail');
+    await expect(detail).toBeVisible();
+
+    // To the end of the biography, which is where the way out used to vanish:
+    // the close was positioned against the panel, and the panel is the element
+    // that scrolls.
+    await detail.evaluate((el) => el.scrollTo(0, el.scrollHeight));
+    await page.waitForTimeout(400);
+
+    const close = page.locator('.detail__close');
+    await expect(close, 'the close button scrolled off the panel').toBeInViewport();
+
+    // Reachable, not merely present: a browser bar across the bottom of the
+    // viewport, or anything else drawn over it, would take the tap instead.
+    const reachable = await page.evaluate(() => {
+      const button = document.querySelector('.detail__close');
+      if (!button) return false;
+      const box = button.getBoundingClientRect();
+      const at = document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2);
+      return at === button || button.contains(at);
+    });
+    expect(reachable, 'something is covering the close button').toBe(true);
+
+    await close.click();
+    await expect(page.locator('.detail')).toHaveCount(0);
+  });
+
+  test('an open sheet stays inside the viewport the browser actually gives us', async ({ page }) => {
+    await openWith(page, { query: 'mercy' });
+    await openSidebar(page);
+
+    // Only sheets that are actually open: at rest the sidebar is parked below
+    // the fold on purpose, and measuring it there says nothing.
+    const spill = () =>
+      page.evaluate(() => {
+        const view = window.visualViewport;
+        const bottom = view ? view.height : window.innerHeight;
+        return [...document.querySelectorAll('.sidebar, .detail, .reader')]
+          .filter((el) => {
+            const box = el.getBoundingClientRect();
+            return box.height > 0 && box.top < bottom;
+          })
+          .map((el) => ({ cls: el.className, over: Math.round(el.getBoundingClientRect().bottom - bottom) }))
+          .filter((r) => r.over > 1);
+      });
+
+    expect(await spill(), 'the controls sheet runs past the bottom').toEqual([]);
+
+    // The reader and the biography are the two that a browser bar across the
+    // bottom would eat, which is the case that started this.
+    await page.locator('.hadith-ref').first().click();
+    await expect(page.locator('.reader')).toBeVisible();
+    expect(await spill(), 'the reader runs past the bottom').toEqual([]);
+
+    await page.locator('.chain__node').first().click();
+    await expect(page.locator('.detail')).toBeVisible();
+    expect(await spill(), 'the biography runs past the bottom').toEqual([]);
   });
 
   test('the isolation bar stays clear of the top bar and inside the screen', async ({ page }) => {

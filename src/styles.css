@@ -691,13 +691,30 @@ input:focus-visible,
   }
 }
 
+/*
+  Sticky rather than absolute: the panel is the scrolling element, so anything
+  positioned against it scrolls away with the content. A biography is long
+  enough that the close button left the screen entirely, and there is no other
+  way to dismiss the panel.
+*/
+.detail__bar {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  display: flex;
+  justify-content: flex-end;
+  height: 0;
+}
+
 .detail__close {
-  position: absolute;
-  top: 1.1rem;
-  right: 1.2rem;
   font-size: 1.4rem;
   line-height: 1;
-  color: var(--ink-faint);
+  padding: 0.2rem 0.35rem;
+  border-radius: 999px;
+  color: var(--ink-soft);
+  /* It sits over whatever has scrolled beneath it. */
+  background: rgba(9, 12, 21, 0.92);
+  backdrop-filter: blur(6px);
 }
 
 .detail__close:hover {
@@ -980,6 +997,7 @@ input:focus-visible,
   width: min(52rem, calc(100vw - 50rem));
   min-width: 26rem;
   max-height: 60vh;
+  max-height: 60dvh;
   overflow-y: auto;
   padding: 1.1rem 1.4rem 1.4rem;
   border-radius: 14px;
@@ -998,14 +1016,21 @@ input:focus-visible,
   }
 }
 
+/* The reader scrolls too, and its close is in this bar — same reasoning. */
 .reader__bar {
+  position: sticky;
+  top: 0;
+  z-index: 3;
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 1rem;
-  margin-bottom: 0.9rem;
+  margin: -0.4rem 0 0.9rem;
+  padding: 0.4rem 0;
   font-size: 0.72rem;
-  color: var(--ink-faint);
+  color: var(--ink-soft);
+  background: rgba(9, 12, 21, 0.94);
+  backdrop-filter: blur(6px);
 }
 
 .reader__book {
@@ -1533,6 +1558,7 @@ input:focus-visible,
     bottom: 0;
     width: 100%;
     max-height: 82vh;
+    max-height: 82dvh;
     padding: 1rem 1rem 2rem;
     padding-bottom: max(2rem, env(safe-area-inset-bottom));
     border-radius: 16px 16px 0 0;
@@ -1635,6 +1661,7 @@ input:focus-visible,
     width: 100%;
     max-width: none;
     max-height: 85vh;
+    max-height: 85dvh;
     transform: none;
     border-radius: 16px 16px 0 0;
     border-top: 1px solid var(--edge);
@@ -1717,6 +1744,7 @@ input:focus-visible,
 
   .legend__panel {
     max-height: 50vh;
+    max-height: 50dvh;
     overflow-y: auto;
   }
 
