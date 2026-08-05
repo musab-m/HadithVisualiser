@@ -241,6 +241,12 @@ test.describe('the controls', () => {
     const pick = (text: string) =>
       page.locator('.kinds__list li', { hasText: text }).first().locator('.check__box').click();
 
+    // The panel arrives folded — ten options with their terms and counts is
+    // most of a phone screen — and says so rather than hiding that it is there.
+    await expect(page.locator('.kinds__list')).toHaveCount(0);
+    await expect(kinds.locator('.fold__summary')).toBeVisible();
+    await page.getByRole('button', { name: 'Kinds of report' }).click();
+
     // Every option carries the count it would give, so a filter can be judged
     // before it is spent — and the count has to be the truth.
     const stated = Number(
@@ -265,9 +271,77 @@ test.describe('the controls', () => {
     await settled(page);
     expect((await stats(page)).hadiths).toBeLessThanOrEqual(both);
 
+    // Women are read off how the literature names them, so the option is only
+    // worth having if what it counts is real. This collection has none at all —
+    // forty hadiths qudsi, every chain through a Companion man — and a filter
+    // that offered a number here would be inventing it.
+    await kinds.getByRole('button', { name: 'clear' }).click();
+    await settled(page);
+    const none = page.locator('.kinds__list li', { hasText: 'a woman transmitted it' }).first();
+    await expect(none.locator('.kinds__n')).toHaveText('0');
+
+    // A collection that does have them, to see the same count spent.
+    await page.locator('.books').getByText(CHAPTER_BOOK_TITLE).click();
+    await settled(page);
+    const stated_women = Number(
+      (await page.locator('.kinds__list li', { hasText: 'a woman transmitted it' })
+        .first()
+        .locator('.kinds__n')
+        .innerText()).replace(/,/g, ''),
+    );
+    expect(stated_women).toBeGreaterThan(0);
+    await pick('a woman transmitted it');
+    await settled(page);
+    expect((await stats(page)).hadiths).toBe(stated_women);
+    await page.locator('.books').getByText(CHAPTER_BOOK_TITLE).click();
+
     await kinds.getByRole('button', { name: 'clear' }).click();
     await settled(page);
     expect((await stats(page)).hadiths).toBe(SMALL_BOOK_HADITHS);
+
+    // Folded again, with nothing chosen, it goes back to naming its headings.
+    await page.getByRole('button', { name: 'Kinds of report' }).click();
+    await expect(page.locator('.kinds__list')).toHaveCount(0);
+  });
+
+  test('a narrator can be found by name and lit up in the graph', async ({ app: page }) => {
+    await openSidebar(page);
+    const box = page.getByLabel('Find a narrator by name');
+    const results = page.locator('.rawi');
+
+    // Arabic finds the Arabic. `عائشة` is spelled here without the hamza and
+    // without vowels, which is how it is typed.
+    await box.fill('عائشه');
+    await expect(results.first()).toBeVisible();
+    await expect(results.first()).toContainText('عائشة');
+
+    // Only 83 of the 8,084 narrators carry an English name, so a Latin query
+    // has to reach the Arabic through the consonants both spellings share.
+    await box.fill('abu hurayra');
+    await expect(results.first()).toBeVisible();
+    await expect(results.first()).toContainText('هريرة');
+
+    // A narrator can be in the corpus without being on screen — al-Bukhārī is
+    // not in this collection — and the list says so rather than lighting
+    // nothing and leaving it at that.
+    await box.fill('bukhari');
+    await expect(results.first()).toBeVisible();
+    await expect(results.first()).toContainText('not in view');
+
+    await box.fill('abu hurayra');
+    await expect(results.first()).toContainText('هريرة');
+    await results.first().click();
+    const detail = page.locator('.detail');
+    await expect(detail).toBeVisible();
+    await expect(detail.locator('.detail__ar')).toContainText('عبد الرحمن بن صخر');
+    // The heading stops at the settled reading; the rest is on its title.
+    expect(await detail.locator('.detail__ar').innerText()).not.toContain('وقيل');
+    expect(await detail.locator('.detail__ar').getAttribute('title')).toContain('وقيل');
+
+    await page.locator('.detail__close').click();
+    await box.fill('zzzznobody');
+    await expect(results).toHaveCount(0);
+    await box.fill('');
   });
 
   test('the legend explains itself and folds away', async ({ app: page }) => {

@@ -1,5 +1,5 @@
-import { useMemo } from 'react';
-import { KIND_GROUPS, kindsOf, matchesKinds } from '../graph/kinds';
+import { useMemo, useState } from 'react';
+import { ALL_KINDS, KIND_GROUPS, kindsOf, matchesKinds } from '../graph/kinds';
 import { useStore } from '../state/store';
 
 /**
@@ -9,6 +9,12 @@ import { useStore } from '../state/store';
  * chosen, so the reader can see what a filter is worth before spending a click
  * on it — and can see when a combination has nothing in it without having to
  * try it.
+ *
+ * Folded away by default. Ten options with their classical terms and their
+ * counts is most of a phone screen, and the sidebar's first job is the
+ * collections; open, it says what it is holding, so a filter can never be left
+ * on out of sight. Closed it also costs nothing — the counts walk every chain
+ * in scope, and that work only happens while they are on screen.
  */
 export function KindFilter() {
   const books = useStore((s) => s.books);
@@ -17,6 +23,7 @@ export function KindFilter() {
   const kinds = useStore((s) => s.kinds);
   const toggleKind = useStore((s) => s.toggleKind);
   const clearKinds = useStore((s) => s.clearKinds);
+  const [open, setOpen] = useState(kinds.length > 0);
 
   const chosen = useMemo(() => new Set(kinds), [kinds]);
 
@@ -30,6 +37,7 @@ export function KindFilter() {
    */
   const counts = useMemo(() => {
     const tally = new Map<string, number>();
+    if (!open) return tally;
     for (const slug of activeBooks) {
       const book = books.get(slug);
       if (!book) continue;
@@ -49,14 +57,27 @@ export function KindFilter() {
       }
     }
     return tally;
-  }, [books, activeBooks, narrators, chosen]);
+  }, [books, activeBooks, narrators, chosen, open]);
 
   if (!books.size) return null;
 
+  const chosenLabels = ALL_KINDS.filter((k) => chosen.has(k.id)).map((k) => k.label);
+
   return (
-    <section className="panel">
+    <section className={`panel panel--fold${open ? ' panel--open' : ''}`}>
       <div className="panel__head">
-        <h2>Kinds of report</h2>
+        <button
+          className="fold"
+          onClick={() => setOpen(!open)}
+          aria-expanded={open}
+          aria-controls="kinds-body"
+        >
+          <span className="fold__mark" aria-hidden>
+            ▸
+          </span>
+          <h2>Kinds of report</h2>
+          {kinds.length ? <span className="fold__count">{kinds.length}</span> : null}
+        </button>
         {kinds.length ? (
           <button className="link" onClick={clearKinds}>
             clear
@@ -64,40 +85,55 @@ export function KindFilter() {
         ) : null}
       </div>
 
-      {KIND_GROUPS.map((group) => (
-        <div className="kinds" key={group.id}>
-          <h3 className="kinds__head">{group.label}</h3>
-          <ul className="kinds__list">
-            {group.kinds.map((kind) => {
-              const on = chosen.has(kind.id);
-              const n = counts.get(kind.id) ?? 0;
-              return (
-                <li key={kind.id}>
-                  <label className={`check check--tight${!on && !n ? ' check--empty' : ''}`}>
-                    <input type="checkbox" checked={on} onChange={() => toggleKind(kind.id)} />
-                    <span className="check__box" />
-                    <span className="check__label">
-                      <span className="kinds__name">
-                        {kind.label}
-                        {kind.term ? <em className="kinds__term">{kind.term}</em> : null}
-                      </span>
-                      {kind.hint ? <span className="kinds__hint">{kind.hint}</span> : null}
-                    </span>
-                    <span className="kinds__n">{n.toLocaleString()}</span>
-                  </label>
-                </li>
-              );
-            })}
-          </ul>
-          <p className="hint">{group.note}</p>
-        </div>
-      ))}
+      {/*
+        Closed, the panel still has to answer "is anything filtering what I am
+        looking at?" — a hidden filter that quietly halves the corpus is worse
+        than a long list.
+      */}
+      {!open ? (
+        <p className="fold__summary">
+          {chosenLabels.length ? chosenLabels.join(' · ') : 'Ruling, shape of the chain, who is in it'}
+        </p>
+      ) : null}
 
-      <p className="hint">
-        Choices within a heading widen the result; choices under different headings narrow
-        it. Marfūʿ, mawqūf and maqṭūʿ are deliberately not offered: they cannot be read off
-        a parsed chain reliably enough to be worth showing.
-      </p>
+      {open ? (
+        <div id="kinds-body">
+          {KIND_GROUPS.map((group) => (
+            <div className="kinds" key={group.id}>
+              <h3 className="kinds__head">{group.label}</h3>
+              <ul className="kinds__list">
+                {group.kinds.map((kind) => {
+                  const on = chosen.has(kind.id);
+                  const n = counts.get(kind.id) ?? 0;
+                  return (
+                    <li key={kind.id}>
+                      <label className={`check check--tight${!on && !n ? ' check--empty' : ''}`}>
+                        <input type="checkbox" checked={on} onChange={() => toggleKind(kind.id)} />
+                        <span className="check__box" />
+                        <span className="check__label">
+                          <span className="kinds__name">
+                            {kind.label}
+                            {kind.term ? <em className="kinds__term">{kind.term}</em> : null}
+                          </span>
+                          {kind.hint ? <span className="kinds__hint">{kind.hint}</span> : null}
+                        </span>
+                        <span className="kinds__n">{n.toLocaleString()}</span>
+                      </label>
+                    </li>
+                  );
+                })}
+              </ul>
+              <p className="hint">{group.note}</p>
+            </div>
+          ))}
+
+          <p className="hint">
+            Choices within a heading widen the result; choices under different headings narrow
+            it. Marfūʿ, mawqūf and maqṭūʿ are deliberately not offered: they cannot be read off
+            a parsed chain reliably enough to be worth showing.
+          </p>
+        </div>
+      ) : null}
     </section>
   );
 }
