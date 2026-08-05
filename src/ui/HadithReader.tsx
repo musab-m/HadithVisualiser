@@ -1,5 +1,5 @@
-import { PROPHET_ID, collectorId } from '../corpus/types';
 import { useStore } from '../state/store';
+import { nodesOf, pathOf } from '../graph/path';
 
 /**
  * The critic's name without the honorifics and death year, for a chip that has
@@ -28,14 +28,14 @@ export function HadithReader() {
   const record = book?.hadiths.find((h) => h.id === reading);
   const text = texts.get(reading);
 
-  const path = record ? [PROPHET_ID, ...record.chain, collectorId(slug)] : [];
   /*
-    The Prophet ﷺ heads the path whether or not the chain reaches him, because
-    that is the frame every report is read in — but where it does not reach him
-    the first step is a gap, not a hearing. Drawn as an ordinary arrow it read
-    as a claim the chain does not make, so it is struck through.
+    The same path the graph draws, so the two never say different things: the
+    Prophet ﷺ heads it only where the report is his, the steps the isnad does
+    not attest are marked, and a report that stops at a Companion or a Follower
+    is shown stopping there.
   */
-  const breaks = record ? !record.toProphet : false;
+  const path = record ? nodesOf(record, slug) : [];
+  const steps = record ? pathOf(record, slug) : [];
 
   return (
     <div className="reader" role="dialog" aria-label="Hadith">
@@ -55,8 +55,22 @@ export function HadithReader() {
               <em className="reader__grade-by">{shortName(book.gradedBy.author)}</em>
             </span>
           ) : null}
+          {/*
+            Two different things, and the difference is the whole of mawqūf.
+            A report that names him is his and only this reading of the isnad
+            fell short; one that never names him stopped where it stopped.
+          */}
           {record && !record.toProphet ? (
-            <span className="reader__grade reader__grade--warn">chain not traced to the Prophet</span>
+            <span
+              className="reader__grade reader__grade--warn"
+              title={
+                record.namesProphet
+                  ? 'The report is his, but the chain as parsed runs out before reaching him.'
+                  : 'The Prophet ﷺ is not named in this report at all: it is traced no further back than the narrator at the head of the chain.'
+              }
+            >
+              {record.namesProphet ? 'chain stops short of the Prophet' : 'not traced to the Prophet'}
+            </span>
           ) : null}
         </div>
         <div className="reader__actions">
@@ -79,12 +93,20 @@ export function HadithReader() {
                   {entry?.ar ?? id}
                 </button>
                 {i < path.length - 1 ? (
-                  breaks && i === 0 ? (
+                  steps[i]?.gap ? (
                     <span
                       className="chain__arrow chain__arrow--broken"
                       role="img"
-                      aria-label="broken link: the chain does not reach the Prophet"
-                      title="The chain as parsed stops short of the Prophet ﷺ — this report is traced no further back than the narrator beside it."
+                      aria-label={
+                        i === 0
+                          ? 'not a hearing: the chain does not reach the Prophet'
+                          : 'not a hearing: a narrator here could not be identified'
+                      }
+                      title={
+                        i === 0
+                          ? 'The report is the Prophet’s ﷺ, but the chain as parsed does not run back to him — so this step is an attribution rather than a hearing.'
+                          : 'The isnad names somebody here by relation — his father, his brother — whom the biographical literature could not be matched to. These two did not hear it from one another.'
+                      }
                     >
                       →
                     </span>

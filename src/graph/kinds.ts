@@ -22,7 +22,7 @@
  */
 
 import type { HadithRecord, NarratorIndexEntry } from '../corpus/types';
-import { PROPHET_ID, collectorId } from '../corpus/types';
+import { pathOf } from './path';
 
 /** Matches `SUBLEVEL_SPREAD` in the graph builder; see `positionOf`. */
 const SUBLEVEL_SPREAD = 0.66;
@@ -91,7 +91,7 @@ export const KIND_GROUPS: KindGroup[] = [
   {
     id: 'who',
     label: 'Who is in the chain',
-    note: 'Read from how the literature names a narrator — bint, an umm kunya, or ṣaḥābiyya said outright. It finds 208 women; one named by neither would be missed.',
+    note: 'Read from how the literature names a narrator — bint, an umm kunya, or ṣaḥābiyya said outright. It finds 209 women; one named by neither would be missed.',
     kinds: [
       {
         id: 'women',
@@ -151,12 +151,14 @@ export function kindsOf(
   if (!hadith.chain.length) return kinds;
   if (hadith.chain.length <= 3) kinds.push('high');
 
-  const path = [PROPHET_ID, ...hadith.chain, collectorId(bookSlug)];
+  // Walked as the graph walks it, from the one definition of the path, so a
+  // count and the picture it describes can never disagree — including about
+  // whether there is a step from the Prophet at all.
   let backward = false;
   let peer = false;
-  for (let i = 0; i < path.length - 1; i++) {
-    const from = positionOf(narrators.get(path[i]));
-    const to = positionOf(narrators.get(path[i + 1]));
+  for (const step of pathOf(hadith, bookSlug)) {
+    const from = positionOf(narrators.get(step.from));
+    const to = positionOf(narrators.get(step.to));
     if (from === undefined || to === undefined) continue;
     const drop = to - from;
     if (Math.abs(drop) <= SAME_AGE) peer = true;

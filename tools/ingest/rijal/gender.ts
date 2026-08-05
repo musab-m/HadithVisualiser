@@ -15,7 +15,7 @@
  * name contain بنت" but "does بنت come before بن": whichever marker names *this*
  * person comes first, and the other belongs to a parent further along.
  *
- * This finds 208 of the 8,084 narrators in the corpus, on 4,860 chains. It is a
+ * This finds 209 of the 8,123 narrators in the corpus, on 4,899 chains. It is a
  * reading of the name and is labelled as one wherever it is offered.
  */
 

@@ -48,8 +48,28 @@ export interface ParsedIsnad {
   names: string[];
   /** The chain explicitly reached the Prophet ﷺ. */
   reachedProphet: boolean;
+  /**
+   * He is named somewhere in the report, even where the chain did not run into
+   * him.
+   *
+   * Weaker evidence than `reachedProphet`, and kept apart from it for that
+   * reason. A report that says `قال رسول الله` is his however the isnad reads;
+   * one that never names him at all has stopped at a Companion or a Follower,
+   * and stopping is the whole content of mawqūf and maqṭūʿ.
+   */
+  namesProphet: boolean;
   /** Parsing stopped early at a tahwil (ح) marking a second parallel chain. */
   truncatedAtTahwil: boolean;
+  /**
+   * Indices `i` where somebody stood between `names[i - 1]` and `names[i]` and
+   * was dropped, so those two are *not* a hearing.
+   *
+   * The isnad named a person by their relation — `عن أخيه`, `عن مولاه` — and no
+   * lookup table can turn that into a man. The link cannot be drawn, but the
+   * step is real and one narrator longer than it looks, which is exactly what a
+   * reader counting the chain needs told.
+   */
+  gaps: number[];
 }
 
 // Alef and ya variants are spelled inconsistently across editions, so the
@@ -293,7 +313,15 @@ const UNRESOLVABLE_KIN = new Set(
 );
 
 const MAX_CHAIN = 16;
-const MAX_NAME_WORDS = 9;
+/*
+  A cap on how long a span can be and still read as a name. Nine was too tight:
+  `عبد الرحمن بن عبد الله بن عبد الرحمن بن أبي صعصعة` is eleven words and a
+  perfectly ordinary nasab, and rejecting it ended the chain two narrators early
+  — in Bukhari 19, before Abū Saʿīd al-Khudrī and before the Prophet. Twelve
+  still refuses the matn, which the narrative tokens and the attestation check
+  catch anyway.
+*/
+const MAX_NAME_WORDS = 12;
 
 /** Trim a raw span down to something that could be a name. */
 function cleanName(span: string): string {
@@ -389,7 +417,16 @@ export function parseIsnad(arabic: string, options: ParseOptions = {}): ParsedIs
   const maps = options.maps ?? EMPTY_RELATIVE_MAPS;
   const attested = options.attested;
   let text = stripHonorifics(stripDiacritics(arabic ?? ''));
-  if (!text) return { names: [], reachedProphet: false, truncatedAtTahwil: false };
+  if (!text) {
+    return {
+      names: [],
+      reachedProphet: false,
+      namesProphet: false,
+      truncatedAtTahwil: false,
+      gaps: [],
+    };
+  }
+  const namesProphet = PROPHET_RE.test(text);
   text = rewriteBackward(text);
 
   // Collect every transmission verb first; a narrator span runs from the end
@@ -401,8 +438,11 @@ export function parseIsnad(arabic: string, options: ParseOptions = {}): ParsedIs
   }
 
   const names: string[] = [];
+  const gaps: number[] = [];
   let reachedProphet = false;
   let truncatedAtTahwil = false;
+  /** Somebody was named between the last name taken and the next one. */
+  let dropped = false;
 
   for (let i = 0; i < verbs.length && names.length < MAX_CHAIN; i++) {
     const from = verbs[i].end;
@@ -430,7 +470,8 @@ export function parseIsnad(arabic: string, options: ParseOptions = {}): ParsedIs
     const kin = resolveKin(name, names, maps);
     if (kin === null) {
       // An unresolvable kin reference is a real gap in the chain, not the
-      // end of it — keep walking.
+      // end of it — keep walking, and remember that the next link crosses him.
+      dropped = names.length > 0;
       continue;
     }
     name = kin;
@@ -452,6 +493,8 @@ export function parseIsnad(arabic: string, options: ParseOptions = {}): ParsedIs
     // The same narrator repeated across a `قال` aside — collapse.
     if (names.length && normaliseKey(names[names.length - 1]) === normaliseKey(name)) continue;
 
+    if (dropped) gaps.push(names.length);
+    dropped = false;
     names.push(name);
 
     if (prophetAt > 0) {
@@ -461,7 +504,7 @@ export function parseIsnad(arabic: string, options: ParseOptions = {}): ParsedIs
     if (truncatedAtTahwil) break;
   }
 
-  return { names, reachedProphet, truncatedAtTahwil };
+  return { names, reachedProphet, namesProphet, truncatedAtTahwil, gaps };
 }
 
 /**

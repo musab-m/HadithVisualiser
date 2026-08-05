@@ -8,7 +8,7 @@
  * vary between editions — أ ا إ, ى ي, ة ه. It is what makes `عائشه` typed
  * quickly find `عَائِشَة`.
  *
- * `skeleton` is for the other direction. Only 83 of the 8,084 narrators carry
+ * `skeleton` is for the other direction. Only 84 of the 8,123 narrators carry
  * an English name — the compilers and a few famous kunyas — so `abu hurayra`
  * has to reach the Arabic itself, and the only thing a transliteration reliably
  * agrees on is the consonants. Hurayra, Huraira, Hurairah differ in every vowel

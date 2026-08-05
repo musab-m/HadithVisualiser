@@ -6,7 +6,7 @@ import { Sira } from './Sira';
 /**
  * The name, without the disagreement about it.
  *
- * 351 of the 8,084 records carry the rijāl literature's apparatus inside the
+ * 351 of the 8,123 records carry the rijāl literature's apparatus inside the
  * full name — `عبد الرحمن بن صخر ، وقيل : عبد الرحمن بن غنم ، وقيل : …`, which
  * for Abū Hurayra runs to fourteen alternatives and fills a phone screen before
  * a word of biography. The heading takes the reading up to the first `وقيل`;

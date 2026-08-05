@@ -33,7 +33,7 @@ test.describe('the controls', () => {
 
   test('all and none select every collection and no collection', async ({ app: page }) => {
     // The one test that puts the whole corpus on screen. Without a GPU a click
-    // against 8,085 nodes takes tens of seconds, which is the machine rather
+    // against 8,124 nodes takes tens of seconds, which is the machine rather
     // than the site — so it is allowed to take its time, and it is the only
     // place that pays this.
     test.slow();
@@ -138,19 +138,24 @@ test.describe('the controls', () => {
 
   test('reading a hadith opens its text and its chain', async ({ app: page }) => {
     await openSidebar(page);
-    await trace(page, 'mercy');
+    // A report named by number rather than by position in the results: the
+    // hadith at the head of Sahih al-Bukhari runs all the way to the Prophet,
+    // and the panel opened from the top of its chain has to be his. Taking
+    // whatever the search listed first meant taking a Muwaṭṭaʾ āthar as often
+    // as not, whose chain rightly begins at a Companion.
+    await trace(page, 'إنما الأعمال بالنيات');
 
-    await page.locator('.hadith-ref').first().click();
+    await page.getByRole('button', { name: 'bukhari:1', exact: true }).click();
     const reader = page.getByRole('dialog', { name: 'Hadith' });
     await expect(reader).toBeVisible();
     // Arabic is the source text; a reader with only the English has failed to
     // fetch the chunk it was pointed at.
     await expect(reader.locator('.reader__ar')).not.toBeEmpty();
 
-    // Every narrator in the chain is a way into their biography. The first is
-    // always the Prophet ﷺ, whose panel carries the sīra instead: the rows the
-    // others get would all read the same for him, and the hadiths passing
-    // through him are the corpus.
+    // Every narrator in the chain is a way into their biography. This chain
+    // reaches the Prophet ﷺ, so the first of them is him — and his panel
+    // carries the sīra instead: the rows the others get would all read the same
+    // for him, and the hadiths passing through him are the corpus.
     await reader.locator('.chain__node').first().click();
     const detail = page.locator('.detail');
     await expect(detail).toBeVisible();
@@ -185,26 +190,25 @@ test.describe('the controls', () => {
     expect(await grade.getAttribute('title')).toContain('al-Albānī');
   });
 
-  test('a chain that stops short of the Prophet says so in the chain itself', async ({
-    app: page,
-  }) => {
+  test('a chain draws only the steps the isnad attests', async ({ app: page }) => {
     await openSidebar(page);
     // Abu Dawud 4272 is Khālid ibn Dihqān asking a Follower what a word in the
-    // previous hadith meant. It is not traced to the Prophet, and 4271 — the
-    // hadith it is asking about, found by the same wording — is. One search
-    // reaches both.
+    // previous hadith meant. It never names the Prophet, so it stops where it
+    // stops; 4271 — the hadith it is asking about, found by the same wording —
+    // runs all the way to him. One search reaches both.
     await trace(page, 'اعتبط بقتله');
 
     await page.getByRole('button', { name: 'abudawud:4272', exact: true }).click();
     await expect(page.locator('.reader')).toBeVisible();
     await expect(page.locator('.reader__grade--warn')).toBeVisible();
 
-    // The Prophet ﷺ heads every path drawn, because that is the frame a report
-    // is read in — but drawn as an ordinary arrow the first step would assert a
-    // hearing this chain does not claim. Exactly one link is struck through,
-    // and it is the one out of the Prophet.
-    await expect(page.locator('.chain__arrow--broken')).toHaveCount(1);
-    await expect(page.locator('.chain li').first().locator('.chain__arrow--broken')).toHaveCount(1);
+    // Nothing is drawn up to the Prophet ﷺ: a line to him is a claim that the
+    // report is his, and this report does not make it. The chain begins at the
+    // last narrator the isnad names.
+    const chain = page.locator('.chain');
+    await expect(chain).not.toContainText('النبي');
+    await expect(chain.locator('.chain__node').first()).toContainText('صدقة بن خالد');
+    await expect(page.locator('.chain__arrow--broken')).toHaveCount(0);
 
     // The reader is a sheet over the list on a phone, so it has to be put away
     // before the next reference can be reached.
@@ -212,7 +216,29 @@ test.describe('the controls', () => {
     await page.getByRole('button', { name: 'abudawud:4271', exact: true }).click();
     await expect(page.locator('.reader')).toBeVisible();
     await expect(page.locator('.reader__grade--warn')).toHaveCount(0);
+    await expect(page.locator('.chain').locator('.chain__node').first()).toContainText('النبي');
     await expect(page.locator('.chain__arrow--broken')).toHaveCount(0);
+    await page.locator('.reader').getByRole('button', { name: 'Close' }).click();
+  });
+
+  test('a narrator nobody could name is drawn as the jump it is', async ({ app: page }) => {
+    await openSidebar(page);
+    // Bukhari 19 runs `… عن عبد الرحمن بن … بن أبي صعصعة، عن أبيه، عن أبي سعيد`.
+    // The father is named only as a father, and no table turns that into a man,
+    // so the step from Abū Saʿīd is one narrator longer than it looks.
+    await trace(page, 'يوشك أن يكون خير مال المسلم غنم');
+
+    await page.getByRole('button', { name: 'bukhari:19', exact: true }).click();
+    await expect(page.locator('.reader')).toBeVisible();
+
+    // The chain still reaches the Prophet, so the mark is inside it rather than
+    // at its head — and it is the one step nobody reported as a hearing.
+    await expect(page.locator('.reader__grade--warn')).toHaveCount(0);
+    const broken = page.locator('.chain__arrow--broken');
+    await expect(broken).toHaveCount(1);
+    expect(await broken.getAttribute('title')).toContain('relation');
+    await expect(page.locator('.chain li').nth(1).locator('.chain__arrow--broken')).toHaveCount(1);
+
     await page.locator('.reader').getByRole('button', { name: 'Close' }).click();
   });
 
@@ -315,7 +341,7 @@ test.describe('the controls', () => {
     await expect(results.first()).toBeVisible();
     await expect(results.first()).toContainText('عائشة');
 
-    // Only 83 of the 8,084 narrators carry an English name, so a Latin query
+    // Only 84 of the 8,123 narrators carry an English name, so a Latin query
     // has to reach the Arabic through the consonants both spellings share.
     await box.fill('abu hurayra');
     await expect(results.first()).toBeVisible();

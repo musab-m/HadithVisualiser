@@ -82,6 +82,8 @@ export function Graph({ graph, layout, hover, focus, onHover, onSelect, onMenu }
   const nodes = useRef<THREE.InstancedMesh>(null);
   const halos = useRef<THREE.InstancedMesh>(null);
   const edgeGeometry = useRef<THREE.BufferGeometry>(null);
+  const gapGeometry = useRef<THREE.BufferGeometry>(null);
+  const gapLine = useRef<THREE.LineSegments>(null);
   const count = graph.ids.length;
 
   /** An in-progress long press, and the point the finger went down at. */
@@ -167,54 +169,87 @@ export function Graph({ graph, layout, hover, focus, onHover, onSelect, onMenu }
   }, [layout, radius, count]);
 
   // --- edges ----------------------------------------------------------------
+  /*
+    Two layers, because a link the isnad does not attest cannot be drawn the
+    same as one it does. A solid line says these two heard it from one another;
+    a dashed line says the graph is joining them across somebody it could not
+    name, or across an attribution the chain never made. They are separate
+    geometries because a dash pattern is a property of the material.
+  */
   const edgeData = useMemo(() => {
     const pairs = graph.edges.length / 2;
     // Additive blending means brightness accumulates with density. One hadith
     // and the whole corpus differ by four orders of magnitude in edge count,
     // so the per-edge contribution has to fall as the graph fills up.
     const density = Math.min(1, Math.max(0.22, 5000 / Math.max(pairs, 1)));
-    const positions = new Float32Array(pairs * 6);
-    const colors = new Float32Array(pairs * 6);
-    for (let i = 0; i < pairs; i++) {
-      const a = graph.edges[i * 2];
-      const b = graph.edges[i * 2 + 1];
-      for (let k = 0; k < 3; k++) {
-        positions[i * 6 + k] = layout.positions[a * 3 + k];
-        positions[i * 6 + 3 + k] = layout.positions[b * 3 + k];
-      }
-      // Fade with how well travelled the link is, so the trunk routes read
-      // brightly and the one-off transmissions stay as background texture.
-      const kind = graph.edgeKind[i];
-      const base = Math.min(0.05 + Math.log1p(graph.edgeWeight[i]) * 0.075, 0.42);
-      // Only a link running back up a generation gets a brightness floor, so it
-      // survives the wash of ordinary transmission around it. Same-generation
-      // links get the colour but not the emphasis: with generations bucketed to
-      // whole numbers, plenty of them are two adjacent layers rounding together
-      // rather than genuine transmission between contemporaries.
-      const intensity =
-        kind === LINK_BACKWARD
-          ? Math.max(base, 0.26) * Math.max(density, 0.5)
-          : base * density;
-      const from =
-        kind === LINK_PEER ? PEER_COLOR : kind === LINK_BACKWARD ? BACKWARD_COLOR : GRADE_COLORS[graph.grade[a]];
-      const to =
-        kind === LINK_PEER ? PEER_COLOR : kind === LINK_BACKWARD ? BACKWARD_COLOR : GRADE_COLORS[graph.grade[b]];
-      colors[i * 6] = from.r * intensity;
-      colors[i * 6 + 1] = from.g * intensity;
-      colors[i * 6 + 2] = from.b * intensity;
-      colors[i * 6 + 3] = to.r * intensity;
-      colors[i * 6 + 4] = to.g * intensity;
-      colors[i * 6 + 5] = to.b * intensity;
+
+    const layer = (which: 0 | 1) => {
+      const of: number[] = [];
+      for (let i = 0; i < pairs; i++) if (graph.edgeGap[i] === which) of.push(i);
+      return {
+        of: Uint32Array.from(of),
+        positions: new Float32Array(of.length * 6),
+        colors: new Float32Array(of.length * 6),
+      };
+    };
+    const solid = layer(0);
+    const dashed = layer(1);
+
+    for (const lane of [solid, dashed]) {
+      lane.of.forEach((i, slot) => {
+        const a = graph.edges[i * 2];
+        const b = graph.edges[i * 2 + 1];
+        for (let k = 0; k < 3; k++) {
+          lane.positions[slot * 6 + k] = layout.positions[a * 3 + k];
+          lane.positions[slot * 6 + 3 + k] = layout.positions[b * 3 + k];
+        }
+        // Fade with how well travelled the link is, so the trunk routes read
+        // brightly and the one-off transmissions stay as background texture.
+        const kind = graph.edgeKind[i];
+        const base = Math.min(0.05 + Math.log1p(graph.edgeWeight[i]) * 0.075, 0.42);
+        // Only a link running back up a generation gets a brightness floor, so
+        // it survives the wash of ordinary transmission around it.
+        // Same-generation links get the colour but not the emphasis: with
+        // generations bucketed to whole numbers, plenty of them are two
+        // adjacent layers rounding together rather than genuine transmission
+        // between contemporaries. A gap keeps its floor too — a dash lit like
+        // background texture is a dash nobody sees.
+        const intensity =
+          kind === LINK_BACKWARD || graph.edgeGap[i]
+            ? Math.max(base, 0.26) * Math.max(density, 0.5)
+            : base * density;
+        const from =
+          kind === LINK_PEER ? PEER_COLOR : kind === LINK_BACKWARD ? BACKWARD_COLOR : GRADE_COLORS[graph.grade[a]];
+        const to =
+          kind === LINK_PEER ? PEER_COLOR : kind === LINK_BACKWARD ? BACKWARD_COLOR : GRADE_COLORS[graph.grade[b]];
+        lane.colors[slot * 6] = from.r * intensity;
+        lane.colors[slot * 6 + 1] = from.g * intensity;
+        lane.colors[slot * 6 + 2] = from.b * intensity;
+        lane.colors[slot * 6 + 3] = to.r * intensity;
+        lane.colors[slot * 6 + 4] = to.g * intensity;
+        lane.colors[slot * 6 + 5] = to.b * intensity;
+      });
     }
-    return { positions, colors, base: colors.slice() };
+
+    return {
+      lanes: [
+        { ...solid, base: solid.colors.slice() },
+        { ...dashed, base: dashed.colors.slice() },
+      ],
+    };
   }, [graph, layout]);
 
   useEffect(() => {
-    const geometry = edgeGeometry.current;
-    if (!geometry) return;
-    geometry.setAttribute('position', new THREE.BufferAttribute(edgeData.positions, 3));
-    geometry.setAttribute('color', new THREE.BufferAttribute(edgeData.colors, 3));
-    geometry.computeBoundingSphere();
+    for (const [i, geometry] of [edgeGeometry.current, gapGeometry.current].entries()) {
+      if (!geometry) continue;
+      const lane = edgeData.lanes[i];
+      geometry.setAttribute('position', new THREE.BufferAttribute(lane.positions, 3));
+      geometry.setAttribute('color', new THREE.BufferAttribute(lane.colors, 3));
+      // The dash pattern is measured along the line, so the distances have to
+      // exist before the material can space anything against them.
+      geometry.computeBoundingSphere();
+    }
+    gapLine.current?.computeLineDistances();
   }, [edgeData]);
 
   // --- highlight ------------------------------------------------------------
@@ -222,8 +257,7 @@ export function Graph({ graph, layout, hover, focus, onHover, onSelect, onMenu }
   useEffect(() => {
     const mesh = nodes.current;
     const glow = halos.current;
-    const geometry = edgeGeometry.current;
-    if (!mesh || !glow || !geometry) return;
+    if (!mesh || !glow) return;
 
     const activeIndex = active ? graph.index.get(active) : undefined;
     const near = activeIndex === undefined ? undefined : adjacency.get(activeIndex);
@@ -246,17 +280,21 @@ export function Graph({ graph, layout, hover, focus, onHover, onSelect, onMenu }
     if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
     if (glow.instanceColor) glow.instanceColor.needsUpdate = true;
 
-    const colors = geometry.getAttribute('color') as THREE.BufferAttribute;
-    const array = colors.array as Float32Array;
-    const pairs = graph.edges.length / 2;
-    for (let i = 0; i < pairs; i++) {
-      const a = graph.edges[i * 2];
-      const b = graph.edges[i * 2 + 1];
-      const lit = activeIndex === undefined || a === activeIndex || b === activeIndex;
-      const scale = lit ? (activeIndex === undefined ? 1 : 2.4) : 0.12;
-      for (let k = 0; k < 6; k++) array[i * 6 + k] = edgeData.base[i * 6 + k] * scale;
+    for (const [which, geometry] of [edgeGeometry.current, gapGeometry.current].entries()) {
+      if (!geometry) continue;
+      const lane = edgeData.lanes[which];
+      const colors = geometry.getAttribute('color') as THREE.BufferAttribute | undefined;
+      if (!colors) continue;
+      const array = colors.array as Float32Array;
+      lane.of.forEach((i, slot) => {
+        const a = graph.edges[i * 2];
+        const b = graph.edges[i * 2 + 1];
+        const lit = activeIndex === undefined || a === activeIndex || b === activeIndex;
+        const scale = lit ? (activeIndex === undefined ? 1 : 2.4) : 0.12;
+        for (let k = 0; k < 6; k++) array[slot * 6 + k] = lane.base[slot * 6 + k] * scale;
+      });
+      colors.needsUpdate = true;
     }
-    colors.needsUpdate = true;
   }, [active, adjacency, count, edgeData, graph]);
 
   // The halos stack in the same way the edges do.
@@ -314,6 +352,24 @@ export function Graph({ graph, layout, hover, focus, onHover, onSelect, onMenu }
           opacity={0.9}
           blending={THREE.AdditiveBlending}
           depthWrite={false}
+        />
+      </lineSegments>
+
+      {/*
+        The links the isnad does not attest. Dashes are sized off the layout's
+        own spacing so they read the same whether the graph holds one chain or
+        fifty thousand.
+      */}
+      <lineSegments ref={gapLine} frustumCulled={false}>
+        <bufferGeometry ref={gapGeometry} />
+        <lineDashedMaterial
+          vertexColors
+          transparent
+          opacity={0.9}
+          blending={THREE.AdditiveBlending}
+          depthWrite={false}
+          dashSize={layout.spacing * 0.075}
+          gapSize={layout.spacing * 0.055}
         />
       </lineSegments>
 
