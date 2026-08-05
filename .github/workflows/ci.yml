@@ -13,6 +13,13 @@ on:
 permissions:
   contents: read
 
+# Checks are the place these changes get verified, so pushes to a pull request
+# come in bursts. A superseded run has nothing left to say — cancel it rather
+# than let the queue decide which answer arrives first.
+concurrency:
+  group: checks-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
     name: typecheck and build

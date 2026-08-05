@@ -13,6 +13,7 @@ export function App() {
   const error = useStore((s) => s.error);
   const laying = useStore((s) => s.laying);
   const init = useStore((s) => s.init);
+  const topSheet = useStore((s) => s.topSheet);
   const [controls, setControls] = useState(false);
 
   useEffect(() => {
@@ -42,7 +43,11 @@ export function App() {
   }
 
   return (
-    <div className={`app${controls ? ' app--controls' : ''}`}>
+    <div
+      className={`app${controls ? ' app--controls' : ''}${
+        topSheet ? ` app--top-${topSheet}` : ''
+      }`}
+    >
       <Scene />
 
       {/*

@@ -71,6 +71,16 @@ interface State {
 
   focus?: string;
   hover?: string;
+  /**
+   * Which of the two sheets was opened most recently.
+   *
+   * On a phone the biography and the hadith reader occupy the same space, and
+   * each opens the other: a name in a chain opens the biography, a reference
+   * under "chains passing through" opens the reader. Whichever was asked for
+   * last has to be the one on top, or the answer to a tap arrives underneath
+   * what you were already looking at and reads as nothing having happened.
+   */
+  topSheet?: 'detail' | 'reader';
   bios: Map<string, NarratorBio>;
   texts: Map<string, HadithText>;
   reading?: string;
@@ -418,7 +428,7 @@ export const useStore = create<State>((set, get) => {
     },
 
     setFocus(id) {
-      set({ focus: id });
+      set({ focus: id, topSheet: id ? 'detail' : get().topSheet });
       remember();
       const { manifest, bios } = get();
       if (!id || !manifest || bios.has(id)) return;
@@ -435,7 +445,7 @@ export const useStore = create<State>((set, get) => {
     },
 
     async read(hadithId) {
-      set({ reading: hadithId });
+      set({ reading: hadithId, topSheet: hadithId ? 'reader' : get().topSheet });
       if (!hadithId || get().texts.has(hadithId)) return;
       const slug = hadithId.split(':')[0];
       const book = get().books.get(slug);
