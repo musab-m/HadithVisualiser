@@ -79,6 +79,77 @@ test.describe('loading', () => {
     expect(reached.filter((tag) => tag === 'input' || tag === 'button').length).toBeGreaterThan(2);
   });
 
+  test('text has enough contrast against what is behind it', async ({ page }) => {
+    await openWith(page, { query: 'mercy' });
+
+    const failures = await page.evaluate(() => {
+      const parse = (colour: string): [number, number, number, number] => {
+        const parts = colour.match(/[\d.]+/g)?.map(Number) ?? [0, 0, 0, 0];
+        return [parts[0], parts[1], parts[2], parts[3] ?? 1];
+      };
+      const channel = (c: number) => {
+        const s = c / 255;
+        return s <= 0.04045 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
+      };
+      const luminance = ([r, g, b]: number[]) =>
+        0.2126 * channel(r) + 0.7152 * channel(g) + 0.0722 * channel(b);
+      const over = (fg: number[], bg: number[]) =>
+        [0, 1, 2].map((i) => fg[i] * fg[3] + bg[i] * (1 - fg[3]));
+
+      /** Composite every translucent ancestor down to the page background. */
+      const backdrop = (el: Element): number[] => {
+        const stack: number[][] = [];
+        for (let node: Element | null = el; node; node = node.parentElement) {
+          const layer = parse(getComputedStyle(node).backgroundColor);
+          if (layer[3] > 0) stack.push(layer);
+          if (layer[3] === 1) break;
+        }
+        // The page itself is the floor; nothing here sits on white.
+        let base = [7, 10, 18];
+        for (const layer of stack.reverse()) base = over(layer, base);
+        return base;
+      };
+
+      const bad: string[] = [];
+      const seen = new Set<Element>();
+      for (const node of document.querySelectorAll('body *')) {
+        // Only elements holding text of their own.
+        const text = [...node.childNodes]
+          .filter((c) => c.nodeType === Node.TEXT_NODE)
+          .map((c) => c.textContent?.trim())
+          .join('');
+        if (!text || seen.has(node)) continue;
+        seen.add(node);
+
+        const style = getComputedStyle(node);
+        if (style.visibility === 'hidden' || style.display === 'none' || style.opacity === '0') continue;
+        const rect = node.getBoundingClientRect();
+        if (!rect.width || !rect.height) continue;
+        // Labels drawn over the 3D scene have a canvas behind them, which
+        // cannot be sampled this way; they carry their own backdrop and shadow.
+        if (node.closest('.scene') || node.closest('.node-label') || node.closest('.band-label')) continue;
+
+        const fg = parse(style.color);
+        const colour = fg[3] < 1 ? over(fg, backdrop(node)) : fg.slice(0, 3);
+        const [a, b] = [luminance(colour), luminance(backdrop(node))].sort((x, y) => y - x);
+        const contrast = (a + 0.05) / (b + 0.05);
+
+        // WCAG AA: 3:1 once the text is large and bold, 4.5:1 otherwise.
+        const size = parseFloat(style.fontSize);
+        const bold = Number(style.fontWeight) >= 700;
+        const needed = size >= 24 || (bold && size >= 18.66) ? 3 : 4.5;
+        if (contrast < needed) {
+          bad.push(
+            `${node.className || node.tagName} "${text.slice(0, 24)}" ${contrast.toFixed(2)}:1 (needs ${needed})`,
+          );
+        }
+      }
+      return bad;
+    });
+
+    expect(failures).toEqual([]);
+  });
+
   test('every control has a name a screen reader can announce', async ({ page }) => {
     await openWith(page);
 
