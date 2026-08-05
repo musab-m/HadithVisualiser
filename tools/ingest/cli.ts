@@ -29,7 +29,7 @@ import {
 import { BOOKS, HADITH_JSON_BASE, HADITH_JSON_TAG, ITQAN_BASE, findBook, type BookDefinition } from './books.js';
 import { writeJson } from './emit.js';
 import { fetchJson, mapLimit, type FetchOptions } from './fetch.js';
-import { normaliseKey } from './isnad/arabic.js';
+import { normaliseKey, stripDiacritics } from './isnad/arabic.js';
 import { loadKunyaMap, loadRelativeMaps } from './isnad/maps.js';
 import { parseIsnad } from './isnad/parse.js';
 import { RijalDatabase } from './rijal/db.js';
@@ -53,7 +53,7 @@ const SOURCES: CorpusManifest['sources'] = [
     id: 'itqan',
     title: 'Itqan — rijal database',
     url: 'https://github.com/R3GENESI5/Itqan',
-    note: '115,735 narrator profiles consolidated from 22 classical works of ʿilm ar-rijāl, plus per-hadith gradings and the kinship/kunya lookup tables.',
+    note: "115,735 narrator profiles consolidated from 22 classical works of ʿilm ar-rijāl, al-Albānī's rulings on the four Sunan, and the kinship/kunya lookup tables.",
   },
 ];
 
@@ -73,8 +73,14 @@ interface UpstreamBook {
   hadiths: UpstreamHadith[];
 }
 
+interface ItqanHadith {
+  id: number;
+  arabic?: string;
+  grade?: string;
+}
+
 interface ItqanChapter {
-  [index: string]: { id: number; grade?: string };
+  [index: string]: ItqanHadith;
 }
 
 // --- ingestion -------------------------------------------------------------
@@ -90,7 +96,7 @@ async function ingestBook(
   console.log(`${upstream.hadiths.length} hadiths`);
 
   const grades = book.gradesFrom
-    ? await fetchGrades(book, upstream.chapters ?? [], options)
+    ? await fetchGrades(book, upstream.hadiths, upstream.chapters ?? [], options)
     : new Map<number, string>();
 
   const chapters: Chapter[] = (upstream.chapters ?? []).map((c) => ({
@@ -164,6 +170,7 @@ async function ingestBook(
     authorEn: book.authorEn,
     authorAr: book.authorAr,
     authorDiedAH: book.authorDiedAH || undefined,
+    gradedBy: book.gradedBy,
     hadithCount: records.length,
     chainCount,
     narratorCount: narrators.size,
@@ -192,30 +199,124 @@ async function ingestBook(
   return summary;
 }
 
-/** Per-hadith authenticity gradings, which Itqan stores a chapter at a time. */
+/**
+ * Tidy a grade's spelling without touching what it says.
+ *
+ * The same ruling arrives written four ways — `Da'if`, `Da’if`, `Daif`,
+ * `Da if` — because the apostrophe transliterating the ʿayn survives
+ * inconsistently. Left alone they are four different verdicts to anything
+ * counting or colouring them.
+ *
+ * Only orthography is unified. Rulings that differ in substance are left
+ * alone even when they look similar: `Da'if` and `Da'if in chain` say
+ * different things, and merging them would put words in the critic's mouth.
+ */
+function normaliseGrade(raw: string): string | undefined {
+  const text = raw
+    .replace(/[‘’ʻʼ`´]/g, "'")
+    // Upstream carries the odd doubled mark of its own, before anything here
+    // touches it.
+    .replace(/'{2,}/g, "'")
+    .replace(/\s+/g, ' ')
+    .replace(/[,;]\s*$/, '')
+    .trim();
+
+  // A grade has to read as one. Upstream carries the occasional stray number
+  // where a verdict should be.
+  if (!/[a-z]/i.test(text)) return undefined;
+
+  // A trailing \b after the optional apostrophe would be wrong in both of the
+  // rules below, and wrong in the same quiet way: there is no word boundary
+  // between an apostrophe and the end of a string, so the pattern backtracks,
+  // matches the bare word, and leaves the original mark sitting after the
+  // replacement — turning `Mawdu'` into `Maudu''` rather than `Maudu'`.
+  return text
+    .replace(/\bDa'?\s?if\b/gi, (m) => (m[0] === 'd' ? "da'if" : "Da'if"))
+    .replace(/\bMawdu'?/gi, "Maudu'")
+    .replace(/\bMaudu(?!')/g, "Maudu'");
+}
+
+/**
+ * Arabic reduced to its bare letters, for deciding whether two copies of the
+ * same hadith are the same hadith. Vowel marks, punctuation and the honorific
+ * glyphs differ between the two sources for reasons that have nothing to do
+ * with which report it is.
+ */
+function letters(text: string): string {
+  return stripDiacritics(text).replace(/[^\u0621-\u064A]/gu, '');
+}
+
+/**
+ * Per-hadith gradings, which Itqan stores a chapter at a time.
+ *
+ * There is no shared identifier to join on. Itqan numbers each chapter file
+ * from one — both its `id` and its `idInBook` are positions within that file,
+ * not within the book — while the text source numbers hadiths globally across
+ * every collection. Joining those two directly, which is what this did, lines
+ * chapter-local counters up against global ids: it matched nothing at all
+ * except in Ṣaḥīḥ al-Bukhārī, where the global numbering happens to start at
+ * one, and there it matched the wrong hadiths in every chapter after the first.
+ *
+ * So the two are paired by position within a chapter, and — because position
+ * is an assumption rather than a key — every pair is checked against the Arabic
+ * before it is believed. A chapter whose lengths disagree, or whose text does
+ * not line up, is dropped entire rather than half-trusted.
+ */
 async function fetchGrades(
   book: BookDefinition,
+  ours: UpstreamHadith[],
   chapters: { id: number }[],
   options: FetchOptions,
 ): Promise<Map<number, string>> {
   const grades = new Map<number, string>();
   const ids = chapters.length ? chapters.map((c) => c.id) : [1];
   process.stdout.write(`  gradings for ${book.slug} (${ids.length} chapters) … `);
+
+  const mine = new Map<number, UpstreamHadith[]>();
+  for (const h of ours) {
+    const list = mine.get(h.chapterId);
+    if (list) list.push(h);
+    else mine.set(h.chapterId, [h]);
+  }
+
   let missing = 0;
+  let mismatched = 0;
   await mapLimit(ids, 8, async (chapterId) => {
+    let data: ItqanChapter;
     try {
-      const data = await fetchJson<ItqanChapter>(
+      data = await fetchJson<ItqanChapter>(
         `${ITQAN_BASE}/app/data/sunni/${book.gradesFrom}/${chapterId}.json`,
         options,
       );
-      for (const entry of Object.values(data)) {
-        if (entry && typeof entry === 'object' && entry.grade) grades.set(entry.id, entry.grade);
-      }
     } catch {
       missing++;
+      return;
     }
+
+    const theirs = Object.values(data).filter(
+      (entry): entry is ItqanHadith => !!entry && typeof entry === 'object',
+    );
+    const chapter = mine.get(chapterId) ?? [];
+    if (theirs.length !== chapter.length) {
+      mismatched++;
+      return;
+    }
+    if (theirs.some((entry, i) => letters(entry.arabic ?? '') !== letters(chapter[i].arabic))) {
+      mismatched++;
+      return;
+    }
+
+    theirs.forEach((entry, i) => {
+      const grade = entry.grade ? normaliseGrade(entry.grade) : undefined;
+      if (grade) grades.set(chapter[i].id, grade);
+    });
   });
-  console.log(`${grades.size} graded${missing ? `, ${missing} chapters unavailable` : ''}`);
+
+  console.log(
+    `${grades.size} graded` +
+      `${missing ? `, ${missing} chapters unavailable` : ''}` +
+      `${mismatched ? `, ${mismatched} chapters did not line up and were skipped` : ''}`,
+  );
   return grades;
 }
 

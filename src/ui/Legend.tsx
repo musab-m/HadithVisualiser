@@ -17,9 +17,17 @@ export function Legend() {
             {GRADE_LABEL[grade]}
           </li>
         ))}
+        {/*
+          The one rule the key never stated, which left every coloured line
+          unexplained: a red line is not a category of its own, it is a link
+          between two narrators the critics abandoned.
+        */}
+        <li className="legend__rule">…and a line takes the colour of the two it joins</li>
       </ul>
       {links && (links.peer || links.backward) ? (
         <ul className="legend__keys legend__keys--links">
+          {/* These two override the rule above: what is worth seeing about
+              them is the direction, not who the transmitters were. */}
           {links.peer ? (
             <li>
               <span className="legend__dash" style={{ background: LINK_COLOR.peer }} />
@@ -57,6 +65,16 @@ export function Legend() {
             Companions. Companionship claimed for someone whose own ṭabaqa or death year
             rules it out is not shown: al-Iṣāba catalogues everyone <em>claimed</em> as a
             Companion, including those it rejects.
+          </p>
+          <p>
+            The lines carry the same colouring. A link is drawn from the grade of the
+            narrator at one end to the grade of the narrator at the other, so it fades
+            between the two: a red line is not a category of its own but a link joining
+            two men the critics abandoned, and a chain running from gold through green
+            has passed from a Companion to a reliable transmitter. Only the two link
+            colours below override this, where the direction is the point rather than
+            who was transmitting. Brightness follows how well travelled a link is, so
+            the routes carrying many chains stand out from the one-off transmissions.
           </p>
           <p>
             Generations are derived from the chains themselves, not from the classical

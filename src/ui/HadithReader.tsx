@@ -2,6 +2,14 @@ import { PROPHET_ID, collectorId } from '../corpus/types';
 import { useStore } from '../state/store';
 
 /**
+ * The critic's name without the honorifics and death year, for a chip that has
+ * to sit on one line. The full form is on the chip's title.
+ */
+function shortName(author: string): string {
+  return author.replace(/\s*\(d\.[^)]*\)\s*$/, '').split(' ').slice(-1)[0];
+}
+
+/**
  * The text of one hadith, with its chain laid out as the path it travelled.
  * Every name in the path opens that narrator.
  */
@@ -28,7 +36,18 @@ export function HadithReader() {
         <div>
           <span className="reader__book">{book?.titleEn ?? slug}</span>
           <span className="reader__ref">#{record?.ref ?? ''}</span>
-          {record?.grade ? <span className="reader__grade">{record.grade}</span> : null}
+          {/*
+            The grade never appears on its own. It is one critic's ruling on
+            this report, not a property of the report, and shown bare it reads
+            as the latter — so whose it is travels with it, and the title
+            carries the work it was published in.
+          */}
+          {record?.grade && book?.gradedBy ? (
+            <span className="reader__grade" title={`${book.gradedBy.work} — ${book.gradedBy.author}`}>
+              {record.grade}
+              <em className="reader__grade-by">{shortName(book.gradedBy.author)}</em>
+            </span>
+          ) : null}
           {record && !record.toProphet ? (
             <span className="reader__grade reader__grade--warn">chain not traced to the Prophet</span>
           ) : null}

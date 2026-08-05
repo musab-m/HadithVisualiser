@@ -221,6 +221,27 @@ narrator look earlier than he was. Each narrator records which of the three
 placed him. Within a generation they are ranked by death year, so the seniors
 sit above the juniors.
 
+### Rulings on the hadiths themselves
+
+Separate from the narrator grades, and worth not confusing with them: those
+judge a *transmitter*, these judge a *report*. Four collections carry
+al-Albānī's rulings — **17,893 hadiths** across the four Sunan, roughly nine in
+ten of each — and the reader shows the verdict with his name on it. A grade is
+never displayed without one, because ḍaʿīf as a named critic's judgement and
+ḍaʿīf as an anonymous label are not the same claim.
+
+Ṣaḥīḥ al-Bukhārī and Ṣaḥīḥ Muslim are deliberately left ungraded here. Every
+hadith in them comes back "Sahih", which restates the collection's own criterion
+rather than recording a verdict anyone passed, and setting it beside al-Albānī's
+rulings would suggest a judgement that was never made.
+
+There is no shared identifier to join the rulings to the text: the grade source
+numbers each chapter from one, the text source numbers hadiths globally across
+every collection. The two are therefore paired by position within a chapter and
+then **checked against the Arabic before being believed** — a chapter whose
+lengths disagree, or whose text does not line up, is dropped whole rather than
+half-trusted. One chapter of al-Tirmidhī is dropped for exactly that reason.
+
 **4 — Index.** `tools/ingest/search.ts` builds an inverted index over the text —
 single words, plus the adjacent pairs that recur — sharded so a query fetches a
 small slice rather than the whole thing. Arabic is folded first: vowel marks off,
@@ -303,7 +324,7 @@ to them.
 | Source | Used for | Licence |
 | --- | --- | --- |
 | [hadith-json](https://github.com/AhmedBaset/hadith-json) (pinned at `v1.2.0`) | Arabic text and English translation of the collections, scraped from [sunnah.com](https://sunnah.com) | Hadith texts, public domain collections |
-| [Itqan](https://github.com/R3GENESI5/Itqan) by Ali Bin Shahid | 115,735 narrator profiles consolidated from 22 classical works of ʿilm ar-rijāl; per-hadith gradings; the kinship and kunya lookup tables | Code MIT; data compiled from public-domain classical sources |
+| [Itqan](https://github.com/R3GENESI5/Itqan) by Ali Bin Shahid | 115,735 narrator profiles consolidated from 22 classical works of ʿilm ar-rijāl; al-Albānī's per-hadith rulings on the four Sunan; the kinship and kunya lookup tables | Code MIT; data compiled from public-domain classical sources |
 
 The verdicts shown in the biography panel come from the classical literature via
 Itqan — Ibn Ḥajar's *Taqrīb al-Tahdhīb* and *Tahdhīb al-Tahdhīb*, al-Mizzī's

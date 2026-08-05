@@ -1051,6 +1051,14 @@ input:focus-visible,
   font-size: 0.63rem;
 }
 
+.reader__grade-by {
+  font-style: normal;
+  margin-left: 0.35rem;
+  padding-left: 0.35rem;
+  border-left: 1px solid var(--edge);
+  color: var(--ink-faint);
+}
+
 .reader__grade--warn {
   color: #e0a458;
   border-color: rgba(224, 164, 88, 0.3);
@@ -1167,6 +1175,12 @@ input:focus-visible,
   height: 7px;
   border-radius: 50%;
   box-shadow: 0 0 8px currentColor;
+}
+
+/* Reads as a note on the key above rather than another entry in it. */
+.legend__rule {
+  font-style: italic;
+  color: var(--ink-faint);
 }
 
 .legend__keys--links {

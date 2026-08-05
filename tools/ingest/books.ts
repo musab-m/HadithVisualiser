@@ -21,6 +21,19 @@ export interface BookDefinition {
    * authenticity gradings. Omit where Itqan has no counterpart.
    */
   gradesFrom?: string;
+  /**
+   * Whose ruling a grade from this collection is.
+   *
+   * Required alongside `gradesFrom`, because an unattributed grade is worth
+   * less than none: "ḍaʿīf" means one thing as a named critic's judgement and
+   * another as an anonymous label. Set only where the attribution is known.
+   *
+   * Ṣaḥīḥ al-Bukhārī and Ṣaḥīḥ Muslim are deliberately absent. Every hadith in
+   * them comes back "Sahih", which is the collection's own criterion restated
+   * rather than a verdict anyone passed on the report, and presenting it beside
+   * al-Albānī's rulings would suggest a judgement that was never made.
+   */
+  gradedBy?: { work: string; author: string };
 }
 
 /** Pinned so the upstream data format cannot shift under us. */
@@ -37,7 +50,6 @@ export const BOOKS: BookDefinition[] = [
     authorAr: 'محمد بن إسماعيل البخاري',
     authorDiedAH: 256,
     path: 'db/by_book/the_9_books/bukhari.json',
-    gradesFrom: 'bukhari',
   },
   {
     slug: 'muslim',
@@ -47,7 +59,6 @@ export const BOOKS: BookDefinition[] = [
     authorAr: 'مسلم بن الحجاج النيسابوري',
     authorDiedAH: 261,
     path: 'db/by_book/the_9_books/muslim.json',
-    gradesFrom: 'muslim',
   },
   {
     slug: 'abudawud',
@@ -58,6 +69,7 @@ export const BOOKS: BookDefinition[] = [
     authorDiedAH: 275,
     path: 'db/by_book/the_9_books/abudawud.json',
     gradesFrom: 'abudawud',
+    gradedBy: { work: 'Ṣaḥīḥ wa-Ḍaʿīf Sunan', author: 'Muḥammad Nāṣir al-Dīn al-Albānī (d. 1420 AH)' },
   },
   {
     slug: 'tirmidhi',
@@ -68,6 +80,7 @@ export const BOOKS: BookDefinition[] = [
     authorDiedAH: 279,
     path: 'db/by_book/the_9_books/tirmidhi.json',
     gradesFrom: 'tirmidhi',
+    gradedBy: { work: 'Ṣaḥīḥ wa-Ḍaʿīf Sunan', author: 'Muḥammad Nāṣir al-Dīn al-Albānī (d. 1420 AH)' },
   },
   {
     slug: 'nasai',
@@ -78,6 +91,7 @@ export const BOOKS: BookDefinition[] = [
     authorDiedAH: 303,
     path: 'db/by_book/the_9_books/nasai.json',
     gradesFrom: 'nasai',
+    gradedBy: { work: 'Ṣaḥīḥ wa-Ḍaʿīf Sunan', author: 'Muḥammad Nāṣir al-Dīn al-Albānī (d. 1420 AH)' },
   },
   {
     slug: 'ibnmajah',
@@ -88,6 +102,7 @@ export const BOOKS: BookDefinition[] = [
     authorDiedAH: 273,
     path: 'db/by_book/the_9_books/ibnmajah.json',
     gradesFrom: 'ibnmajah',
+    gradedBy: { work: 'Ṣaḥīḥ wa-Ḍaʿīf Sunan', author: 'Muḥammad Nāṣir al-Dīn al-Albānī (d. 1420 AH)' },
   },
   {
     slug: 'malik',
@@ -97,7 +112,6 @@ export const BOOKS: BookDefinition[] = [
     authorAr: 'مالك بن أنس',
     authorDiedAH: 179,
     path: 'db/by_book/the_9_books/malik.json',
-    gradesFrom: 'malik',
   },
   {
     slug: 'darimi',
@@ -107,7 +121,6 @@ export const BOOKS: BookDefinition[] = [
     authorAr: 'عبد الله بن عبد الرحمن الدارمي',
     authorDiedAH: 255,
     path: 'db/by_book/the_9_books/darimi.json',
-    gradesFrom: 'darimi',
   },
   {
     slug: 'ahmed',
@@ -117,7 +130,6 @@ export const BOOKS: BookDefinition[] = [
     authorAr: 'أحمد بن حنبل',
     authorDiedAH: 241,
     path: 'db/by_book/the_9_books/ahmed.json',
-    gradesFrom: 'ahmed',
   },
   {
     slug: 'nawawi40',
@@ -181,7 +193,6 @@ export const BOOKS: BookDefinition[] = [
     authorAr: 'الخطيب التبريزي',
     authorDiedAH: 741,
     path: 'db/by_book/other_books/mishkat_almasabih.json',
-    gradesFrom: 'mishkat_almasabih',
   },
 ];
 
