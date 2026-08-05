@@ -1340,6 +1340,64 @@ input:focus-visible,
   }
 }
 
+/* --- kinds of report ------------------------------------------------------ */
+
+.kinds {
+  margin-bottom: 1rem;
+}
+
+.kinds__head {
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  margin: 0 0 0.45rem;
+}
+
+.kinds__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.kinds__name {
+  display: block;
+  font-size: 0.74rem;
+  color: var(--ink);
+}
+
+.kinds__term {
+  font-style: italic;
+  margin-left: 0.4rem;
+  color: var(--ink-faint);
+}
+
+.kinds__hint {
+  display: block;
+  font-size: 0.64rem;
+  line-height: 1.4;
+  color: var(--ink-faint);
+}
+
+.kinds__n {
+  margin-left: auto;
+  padding-left: 0.5rem;
+  font-size: 0.68rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-soft);
+}
+
+/* Nothing to be had from this one as things stand; still selectable, since
+   changing another choice may bring it back. */
+.check--empty .kinds__name,
+.check--empty .kinds__n {
+  color: var(--ink-faint);
+}
+
 /* --- the narrator menu ----------------------------------------------------- */
 
 .menu {

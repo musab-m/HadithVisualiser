@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import type { BookFile, HadithRecord } from '../corpus/types';
 import { useStore } from '../state/store';
+import { KindFilter } from './KindFilter';
 import { TextSearch } from './TextSearch';
 
 function Stat({ value, label }: { value: string; label: string }) {
@@ -162,6 +163,8 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
       </div>
 
       <TextSearch />
+
+      <KindFilter />
 
       {pinned.length ? (
         <section className="panel">

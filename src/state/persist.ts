@@ -31,6 +31,8 @@ export interface SavedView {
   phraseOnly: boolean;
   /** Narrators every drawn chain has to pass through. */
   isolated: string[];
+  /** Kinds of report kept — rulings, chain shapes. */
+  kinds?: string[];
   /** The biography that was open. */
   focus?: string;
 }
