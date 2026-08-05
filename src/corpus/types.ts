@@ -167,6 +167,27 @@ export interface HadithRecord {
   chain: string[];
   /** The chain explicitly reached the Prophet ﷺ rather than running out. */
   toProphet: boolean;
+  /**
+   * Set where the chain did not reach him but the report names him anyway.
+   *
+   * The difference decides whether a line is drawn to the apex at all. A report
+   * that never names him has stopped at a Companion or a Follower — that is
+   * what mawqūf and maqṭūʿ *are* — and drawing it up to the Prophet would
+   * attribute to him something nobody attributed to him. A report that does
+   * name him is his; it is only this reading of the isnad that fell short, so
+   * the step is drawn as the unattested one it is.
+   */
+  namesProphet?: boolean;
+  /**
+   * Positions where a narrator was named but could not be identified, so the
+   * step is longer than it looks: a gap at `i` sits between `chain[i]` and
+   * `chain[i + 1]`, who did not hear it from one another.
+   *
+   * These are the isnads that name someone by relation — `عن أبيه`, `عن أخيه`
+   * — where no lookup table turns the relation into a man. Drawn as a link,
+   * that jump would claim a hearing nobody reported.
+   */
+  gaps?: number[];
   /** Index of the `text-K.json` chunk holding this hadith's text. */
   t: number;
 }

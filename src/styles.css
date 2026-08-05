@@ -1325,6 +1325,21 @@ input:focus-visible,
   border-radius: 1px;
 }
 
+/* Named by its pattern rather than its colour: a gap keeps the colour of the
+   two narrators it joins. */
+.legend__dash--gap {
+  height: 0;
+  border-top: 2px dashed var(--ink-soft);
+  border-radius: 0;
+}
+
+.legend__ar {
+  font-family: var(--ar);
+  font-size: 0.95em;
+  direction: rtl;
+  unicode-bidi: isolate;
+}
+
 .legend__axis {
   line-height: 1.5;
   max-width: 22rem;
@@ -1346,6 +1361,16 @@ input:focus-visible,
   background: var(--panel);
   backdrop-filter: blur(18px);
   line-height: 1.6;
+  /*
+    The legend is anchored to the bottom of the screen and grows upward, so a
+    panel taller than the space above it carries its own button off the top —
+    open, with no way to close. It scrolls instead.
+  */
+  max-height: min(30rem, 55vh);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--edge-strong) transparent;
 }
 
 .legend__panel p {

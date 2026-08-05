@@ -121,12 +121,18 @@ async function ingestBook(
     // Parsed compiler-first; stored in transmission order, so the graph reads
     // Prophet → … → compiler.
     const chain: string[] = [];
+    const gaps: number[] = [];
+    const dropped = new Set(parsed.gaps);
     for (let k = resolutions.length - 1; k >= 0; k--) {
       const r = resolutions[k];
       const id = r.profile ? `r${r.profile.id}` : `u:${normaliseKey(r.surface)}`;
       // A narrator repeated back-to-back adds a self-loop, not a link.
       if (chain.length && chain[chain.length - 1] === id) continue;
       chain.push(id);
+      // The parser marks the gap on the name it *reached*, counting from the
+      // compiler; stored the other way round, it sits after the name just
+      // pushed — between this narrator and the one who took it from him.
+      if (dropped.has(k)) gaps.push(chain.length - 1);
       narrators.add(id);
       const tally = (identification[id] ??= [0, 0]);
       tally[r.ambiguous ? 1 : 0]++;
@@ -152,6 +158,8 @@ async function ingestBook(
       grade: grades.get(h.id),
       chain,
       toProphet: parsed.reachedProphet,
+      ...(!parsed.reachedProphet && parsed.namesProphet ? { namesProphet: true } : {}),
+      ...(gaps.length ? { gaps } : {}),
       t: chunk,
     });
   });

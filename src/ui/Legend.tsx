@@ -42,13 +42,25 @@ export function Legend() {
               <em>may be riwāyat al-akābir ʿan al-aṣāghir</em>
             </li>
           ) : null}
+          {/*
+            The one mark that means the graph is not sure of itself. It keeps
+            the colour of the two it joins, so it is named by its pattern.
+          */}
+          {links.gap ? (
+            <li>
+              <span className="legend__dash legend__dash--gap" />
+              {links.gap.toLocaleString()} drawn dashed
+              <em>a step the isnad does not attest</em>
+            </li>
+          ) : null}
         </ul>
       ) : null}
 
       <div className="legend__axis">
         <span>
           the Prophet ﷺ at the apex · a narrator sits at the shortest distance any chain puts
-          between them and the Prophet · within a generation, the older are above the younger
+          between them and the Prophet · within a generation, the older are above the younger ·
+          a report that never names him is drawn without a line to him
         </span>
       </div>
       <button className="legend__about" onClick={() => setOpen(!open)}>
@@ -82,6 +94,24 @@ export function Legend() {
             genuinely be transmission between contemporaries or from a junior to a senior —
             or it may only mean the two narrators were placed a layer apart from where the
             sources would place them.
+          </p>
+          <p>
+            A dashed line is a step the isnad does not state. Two of them are drawn that
+            way. Where a narrator is named only by his relation to the last —{' '}
+            <span className="legend__ar">عن أبيه</span>, <span className="legend__ar">عن أخيه</span>{' '}
+            — and no table turns that relation into a man, the two ends are joined but the
+            person between them is missing, so the step is one narrator longer than it
+            looks. And where a report is the Prophet’s ﷺ but the chain as parsed runs out
+            before reaching him, the line to the apex is an attribution rather than a
+            hearing. A pair drawn dashed is one <em>no</em> chain in the corpus attests
+            directly; where any chain does, the link is solid.
+          </p>
+          <p>
+            A report that never names him is not joined to him at all. Its chain stops at
+            the Companion or the Follower it stops at — which is what mawqūf and maqṭūʿ
+            are — and running a line up to the apex would attribute to the Prophet ﷺ
+            something nobody attributed to him. About one chain in seven is drawn this
+            way, and the Muwaṭṭaʾ, which is half āthār, shows it most.
           </p>
           <p>
             Chains are parsed from the Arabic of each collection and matched against the

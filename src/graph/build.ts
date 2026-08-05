@@ -7,7 +7,8 @@
  * the transmitters everything passes through.
  */
 
-import { NARRATOR_GRADES, PROPHET_ID, collectorId, type BookFile, type HadithRecord, type NarratorGrade, type NarratorIndexEntry } from '../corpus/types';
+import { NARRATOR_GRADES, type BookFile, type HadithRecord, type NarratorGrade, type NarratorIndexEntry } from '../corpus/types';
+import { nodesOf, pathOf } from './path';
 
 /** How a link sits relative to the generations it joins. */
 export const LINK_FORWARD = 0;
@@ -52,8 +53,10 @@ export interface GraphData {
   edgeWeight: Float32Array;
   /** Per edge: LINK_FORWARD, LINK_PEER or LINK_BACKWARD. */
   edgeKind: Uint8Array;
+  /** Per edge: 1 where no chain attests the two ends hearing it directly. */
+  edgeGap: Uint8Array;
   /** How many edges of each kind, for the legend. */
-  linkCounts: { peer: number; backward: number };
+  linkCounts: { peer: number; backward: number; gap: number };
   /** Total hadiths represented. */
   hadithCount: number;
 }
@@ -103,30 +106,40 @@ export function buildGraph(
   };
 
   const edgeWeights = new Map<number, number>();
+  /*
+    How many of an edge's occurrences were jumps over somebody unnamed. Held
+    per edge rather than per hadith because the graph is a union: the same two
+    men may be a hearing in one isnad and a jump in another, and if any chain
+    attests them directly the link is real. Only an edge that is *never*
+    attested directly is drawn as a gap.
+  */
+  const edgeGaps = new Map<number, number>();
   let hadithCount = 0;
 
   for (const { book, hadiths } of selection) {
-    const collector = collectorId(book.slug);
     for (const hadith of hadiths) {
       if (!hadith.chain.length) continue;
       const ordinal = hadithCount++;
-      const path = [PROPHET_ID, ...hadith.chain, collector];
-      let previous = -1;
-      path.forEach((id, depth) => {
+
+      nodesOf(hadith, book.slug).forEach((id, depth) => {
         const node = nodeFor(id);
         depths[node].push(depth);
         if (counted[node] !== ordinal) {
           counted[node] = ordinal;
           weights[node]++;
         }
-        if (previous >= 0 && previous !== node) {
-          // Pack the pair into one number: 2^22 node ids keeps the key inside
-          // the exactly-representable integer range.
-          const key = previous * 4194304 + node;
-          edgeWeights.set(key, (edgeWeights.get(key) ?? 0) + 1);
-        }
-        previous = node;
       });
+
+      for (const step of pathOf(hadith, book.slug)) {
+        const from = nodeFor(step.from);
+        const to = nodeFor(step.to);
+        if (from === to) continue;
+        // Pack the pair into one number: 2^22 node ids keeps the key inside
+        // the exactly-representable integer range.
+        const key = from * 4194304 + to;
+        edgeWeights.set(key, (edgeWeights.get(key) ?? 0) + 1);
+        if (step.gap) edgeGaps.set(key, (edgeGaps.get(key) ?? 0) + 1);
+      }
     }
   }
 
@@ -149,7 +162,8 @@ export function buildGraph(
   const edges = new Uint32Array(edgeWeights.size * 2);
   const edgeWeight = new Float32Array(edgeWeights.size);
   const edgeKind = new Uint8Array(edgeWeights.size);
-  const linkCounts = { peer: 0, backward: 0 };
+  const edgeGap = new Uint8Array(edgeWeights.size);
+  const linkCounts = { peer: 0, backward: 0, gap: 0 };
   let e = 0;
   for (const [key, value] of edgeWeights) {
     const from = Math.floor(key / 4194304);
@@ -157,6 +171,12 @@ export function buildGraph(
     edges[e * 2] = from;
     edges[e * 2 + 1] = to;
     edgeWeight[e] = value;
+    // Never once attested as a hearing: every chain drawing these two jumped
+    // over somebody between them.
+    if ((edgeGaps.get(key) ?? 0) === value) {
+      edgeGap[e] = 1;
+      linkCounts.gap++;
+    }
     // Compared at the finer position, not the whole-number band. Chain depth
     // is coarser than the ṭabaqāt, so a father and his son often share a
     // generation; ranking within it by death year still puts the son below,
@@ -183,6 +203,7 @@ export function buildGraph(
     edges,
     edgeWeight,
     edgeKind,
+    edgeGap,
     linkCounts,
     hadithCount,
   };

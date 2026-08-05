@@ -489,13 +489,18 @@ function spansOfLength(words: string[], span: number): [number, string[]][] {
  * accusative — but indexed under one form. Try the alternatives.
  */
 function kunyaVariants(key: string): string[] {
-  if (key.startsWith('ابي ') || key.startsWith('ابا ')) {
-    return [key, `ابو ${key.slice(4)}`];
-  }
-  if (key.startsWith('ابو ')) {
-    return [key, `ابي ${key.slice(4)}`];
-  }
-  return [key];
+  const out = [key];
+  if (key.startsWith('ابي ') || key.startsWith('ابا ')) out.push(`ابو ${key.slice(4)}`);
+  else if (key.startsWith('ابو ')) out.push(`ابي ${key.slice(4)}`);
+  /*
+    The accusative. `سمعت أنسا` is Anas as the object of a verb, and the alef
+    of tanwīn is part of the grammar, not of the man — the literature files him
+    under أنس. Left unmatched he is not attested, and an unattested name is
+    where the parser stops reading, so `سمعت أنسا، عن النبي ﷺ` lost both Anas
+    and the Prophet after him.
+  */
+  if (key.length > 3 && key.endsWith('ا')) out.push(key.slice(0, -1));
+  return out;
 }
 
 /** Score contributed by one corroborating teacher/student record. */

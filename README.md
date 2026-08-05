@@ -7,8 +7,10 @@ biographical literature of **ʿilm ar-rijāl**, and draws the whole corpus as on
 graph in three dimensions.
 
 The Prophet ﷺ sits at the apex. Each layer below is a generation of transmitters
-who heard from the layer above. The compilers — al-Bukhārī, Muslim, Mālik — are at
-the floor. Click any narrator to read their biography, the verdicts classical
+who heard from the layer above, and a line is drawn only where the isnad says one
+belongs: a report that never names him is not joined to him, and a step the chain
+does not attest is dashed rather than solid. The compilers — al-Bukhārī, Muslim,
+Mālik — are at the floor. Click any narrator to read their biography, the verdicts classical
 critics passed on them, who they heard from and taught, and the chains they carry.
 The node at the apex opens the sīra in outline instead — lineage, family, the
 hijra, the campaigns — since a grade, a generation and a list of chains would all
@@ -17,7 +19,7 @@ be the same answer for him.
 You can look at one hadith, a chapter, several collections, or everything at once —
 or search the text and see every chain that carries a given wording.
 
-![The whole corpus: 49,823 chains through 8,084 narrators](docs/overview.png)
+![The whole corpus: 49,843 chains through 8,123 narrators](docs/overview.png)
 
 | One narrator | Three chains |
 | --- | --- |
@@ -79,13 +81,37 @@ It searches the whole register rather than what is drawn, because being told a
 man is in the corpus but not in the collections you have open is an answer and
 an empty list is not; results say which they are.
 
-Only 83 of the 8,084 narrators carry an English name — the compilers, and a few
+Only 84 of the 8,123 narrators carry an English name — the compilers, and a few
 famous kunyas — so a Latin query has to reach the Arabic itself. It does it
 through the consonants: `abu hurayra`, `أبو هريرة` and `Abū Hurayrah` all reduce
 to `bhr`, since vowels are the one thing no two transliterations agree on. What
 that costs is precision, so weight decides between the hits — `bhr` is *exactly*
 Abū Baḥr of seven chains and merely the start of Abū Hurayra of 5,944, and it
 means Abū Hurayra.
+
+## What the lines claim
+
+A line between two narrators is a claim that one heard it from the other, so the
+graph draws one only where the isnad makes it.
+
+**A report that stops, stops.** The line to the apex is drawn where the chain
+runs into the Prophet ﷺ — 74.5% of the corpus. Where it does not but the report
+names him anyway, the step is drawn **dashed**: the report is his and only this
+reading of the isnad fell short (11.4%). Where he is not named at all, **no line
+is drawn to him** (14.0%). That last case is what mawqūf and maqṭūʿ *are* — the
+report stops at a Companion or a Follower — and the Muwaṭṭaʾ, half of which is
+āthār, shows it most: 966 of its 1,847 chains stand clear of the apex.
+
+**A narrator nobody could name is a jump, not a hearing.** Isnads routinely name
+someone only by relation — `عن أبيه`, `عن أخيه`, `عن مولاه` — and where no table
+turns that into a man the chain is one narrator longer than it looks. Those steps
+are recorded at ingest (3,204 of them, on 6.3% of chains) and drawn dashed, so the
+two ends are joined without claiming they met.
+
+A pair is only ever drawn dashed when *no* chain in the corpus attests it
+directly. One isnad naming the man in full is enough to make the link solid
+everywhere, because the graph is the union of what the corpus says, not of what
+any one reading of it missed.
 
 ## Kinds of report
 
@@ -107,8 +133,8 @@ in the rijāl database records a sex, so this is read off how the literature nam
 people: `بنت`, an `أم` kunya, or ṣaḥābiyya said outright. The one trap is a man
 named through his mother — Yaʿlā ibn Umayya is also `يعلى بن منية بنت غزوان` — so
 the rule is not *does the name contain bint* but *does bint come before bin*,
-whichever names this person rather than a parent. That finds **208 women, on
-4,860 chains**; a woman named by neither marker would be missed, and the panel
+whichever names this person rather than a parent. That finds **209 women, on
+4,899 chains**; a woman named by neither marker would be missed, and the panel
 says so.
 
 Choices under one heading widen the result, choices under different headings
@@ -182,7 +208,7 @@ None of those are visible to a unit test of the functions involved.
 | `mobile.spec.ts` | the sheet, the long press, and the isolation bar's geometry on a 390px screen |
 
 Most tests start from a saved view holding one small collection, so the graph
-settles in a second rather than relaxing 49,823 chains; `loads.spec.ts` is the
+settles in a second rather than relaxing 49,843 chains; `loads.spec.ts` is the
 one that pays for the whole corpus. Timeouts are deliberately loose — CI has no
 GPU, WebGL falls back to software, and a tight limit fails on machine speed
 rather than on anything being wrong.
@@ -256,8 +282,9 @@ open every hadith (`حدثنا`, `أخبرني`, `سمعت`, `عن`, …), takin
 one as a narrator and stopping when the chain reaches the Prophet ﷺ or when a span
 stops reading like a name. Kin references (`عن أبيه`, `عن جده`) are resolved
 through lookup tables; where they cannot be, the link is dropped rather than
-guessed at. This recovers a chain from **99.8%** of Sahih al-Bukhari and **100%**
-of Sahih Muslim.
+guessed at — and *recorded*, so the graph can draw the jump instead of pretending
+to a hearing. This recovers a chain from **99.8%** of Sahih al-Bukhari and
+**100%** of Sahih Muslim.
 
 Word boundaries there are drawn around Arabic *letters*, not the Arabic block —
 the block also holds the script's own punctuation. The scraped editions print a
