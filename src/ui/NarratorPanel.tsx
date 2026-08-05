@@ -31,9 +31,18 @@ export function NarratorPanel() {
 
   return (
     <aside className="detail">
-      <button className="detail__close" onClick={() => setFocus(undefined)} aria-label="Close">
-        ×
-      </button>
+      {/*
+        The way out rides along the top of the panel as it scrolls. It used to
+        be positioned against the panel, which is the element that scrolls, so
+        a long biography carried it off the screen and left no way to close at
+        all — worst on a phone, where the panel is a sheet and the browser's
+        own bar takes the bottom of it.
+      */}
+      <div className="detail__bar">
+        <button className="detail__close" onClick={() => setFocus(undefined)} aria-label="Close">
+          ×
+        </button>
+      </div>
 
       <header className="detail__head">
         <div className="detail__names">
