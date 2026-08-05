@@ -219,6 +219,12 @@ export interface NarratorIndexEntry {
   r: boolean;
   /** Set when most appearances were a close call between similar profiles. */
   amb?: boolean;
+  /**
+   * Named as a woman — read off `بنت`, an `أم` kunya, or the literature saying
+   * so. See `tools/ingest/rijal/gender.ts` for what that does and does not
+   * catch; it is a reading of the name, and the interface says so.
+   */
+  w?: boolean;
 }
 
 /** How a narrator's generation was arrived at. */

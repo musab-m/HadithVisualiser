@@ -24,6 +24,7 @@ import {
   CORPUS_FORMAT_VERSION,
 } from '../../src/corpus/types.js';
 import { findBook } from './books.js';
+import { namedAsWoman } from './rijal/gender.js';
 import { assignGenerations, type GenerationResult } from './generations.js';
 import type { KunyaEntry } from './isnad/maps.js';
 import type { RijalDatabase } from './rijal/db.js';
@@ -281,6 +282,7 @@ function describe(
           n: entry.total,
           r: true,
           ...(uncertain ? { amb: true } : {}),
+          ...(namedAsWoman(profile) ? { w: true } : {}),
         },
         bio: {
           ...base,
@@ -322,6 +324,8 @@ function describe(
       sub,
       n: entry.total,
       r: false,
+      // All there is to go on here is what the isnad called her.
+      ...(namedAsWoman({ fullNameAr: kunyaHit?.real ?? surface }) ? { w: true } : {}),
     },
     bio: {
       ...base,

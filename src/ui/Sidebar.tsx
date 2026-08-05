@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import type { BookFile, HadithRecord } from '../corpus/types';
 import { useStore } from '../state/store';
 import { KindFilter } from './KindFilter';
+import { NarratorSearch } from './NarratorSearch';
 import { TextSearch } from './TextSearch';
 
 function Stat({ value, label }: { value: string; label: string }) {
@@ -145,7 +146,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
     <aside className="sidebar" onClickCapture={(e) => {
       // On a phone the sheet covers the graph, so anything that changes what
       // is drawn should hand the screen back to it.
-      if ((e.target as HTMLElement).closest('.picker__result, .found__hit, .found__only')) {
+      if ((e.target as HTMLElement).closest('.picker__result, .found__hit, .found__only, .rawi')) {
         onNavigate?.();
       }
     }}>
@@ -161,6 +162,8 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
         <Stat value={(graph?.ids.length ?? 0).toLocaleString()} label="narrators" />
         <Stat value={((graph?.edges.length ?? 0) / 2).toLocaleString()} label="transmissions" />
       </div>
+
+      <NarratorSearch />
 
       <TextSearch />
 

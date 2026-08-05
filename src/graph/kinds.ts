@@ -88,6 +88,19 @@ export const KIND_GROUPS: KindGroup[] = [
       },
     ],
   },
+  {
+    id: 'who',
+    label: 'Who is in the chain',
+    note: 'Read from how the literature names a narrator — bint, an umm kunya, or ṣaḥābiyya said outright. It finds 208 women; one named by neither would be missed.',
+    kinds: [
+      {
+        id: 'women',
+        label: 'a woman transmitted it',
+        term: 'riwāyat al-nisāʾ',
+        hint: 'somewhere in the chain, including the Companion at its head',
+      },
+    ],
+  },
 ];
 
 export const ALL_KINDS: Kind[] = KIND_GROUPS.flatMap((g) => g.kinds);
@@ -133,6 +146,8 @@ export function kindsOf(
 
   if (hadith.grade) kinds.push(...rulingsIn(hadith.grade));
   if (!hadith.toProphet) kinds.push('unreached');
+  // The compiler and the Prophet are not in `chain`, and neither is a woman.
+  if (hadith.chain.some((id) => narrators.get(id)?.w)) kinds.push('women');
   if (!hadith.chain.length) return kinds;
   if (hadith.chain.length <= 3) kinds.push('high');
 

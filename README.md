@@ -69,10 +69,31 @@ The view survives a refresh. What is stored is the question — the query, the
 book slugs, the narrators being isolated on — never the hadiths it matched, so
 a saved view stays valid when a collection is re-ingested and the ids move.
 
+## Finding one narrator
+
+Type a name into **Find a narrator** and the transmitter lights up in the graph
+with everything they did not carry dimmed behind them — the view the whole
+picture is hardest to give you, reached from the one thing you already know.
+
+It searches the whole register rather than what is drawn, because being told a
+man is in the corpus but not in the collections you have open is an answer and
+an empty list is not; results say which they are.
+
+Only 83 of the 8,084 narrators carry an English name — the compilers, and a few
+famous kunyas — so a Latin query has to reach the Arabic itself. It does it
+through the consonants: `abu hurayra`, `أبو هريرة` and `Abū Hurayrah` all reduce
+to `bhr`, since vowels are the one thing no two transliterations agree on. What
+that costs is precision, so weight decides between the hits — `bhr` is *exactly*
+Abū Baḥr of seven chains and merely the start of Abū Hurayra of 5,944, and it
+means Abū Hurayra.
+
 ## Kinds of report
 
-The sidebar can narrow the corpus to kinds of hadith, from two groups that are
-not equally certain and are kept apart for that reason.
+The sidebar can narrow the corpus to kinds of hadith, from three groups that are
+not equally certain and are kept apart for that reason. The panel is folded
+until asked for — ten options with their classical terms is most of a phone
+screen — and names whatever it is holding while closed, so a filter can never be
+left on out of sight.
 
 **Al-Albānī's ruling** — sound, good, weak, denounced, fabricated — for the
 third of the corpus he ruled on. **The shape of the chain** — a senior narrating
@@ -80,6 +101,15 @@ from a junior (*riwāyat al-akābir ʿan al-aṣāghir*), transmission between
 contemporaries (*riwāyat al-aqrān*), a short chain (*isnād ʿālī*), a chain not
 traced to the Prophet — read straight off the chain, so these are exact: they
 restate what the graph already draws.
+
+**Who is in the chain** — at present, whether a woman transmitted it. No profile
+in the rijāl database records a sex, so this is read off how the literature names
+people: `بنت`, an `أم` kunya, or ṣaḥābiyya said outright. The one trap is a man
+named through his mother — Yaʿlā ibn Umayya is also `يعلى بن منية بنت غزوان` — so
+the rule is not *does the name contain bint* but *does bint come before bin*,
+whichever names this person rather than a parent. That finds **208 women, on
+4,860 chains**; a woman named by neither marker would be missed, and the panel
+says so.
 
 Choices under one heading widen the result, choices under different headings
 narrow it, and every option carries the count it would give against whatever
@@ -146,7 +176,7 @@ None of those are visible to a unit test of the functions involved.
 | | |
 | --- | --- |
 | `loads.spec.ts` | the corpus fetches and draws; the canvas has a live GL context; the page has headings, names on every control, a tab order that reaches them, and text that clears WCAG AA against whatever is behind it |
-| `controls.spec.ts` | every button and link — collections, chapters, pins, the reader, the biography, the legend — and a check that nothing on screen is covering anything else |
+| `controls.spec.ts` | every button and link — collections, chapters, pins, the reader, the biography, the narrator search, the filters, the legend — and a check that nothing on screen is covering anything else |
 | `search.spec.ts` | Arabic and English queries, the phrase-only scope, clearing, a query that matches nothing, paging, and composing with the collection filter |
 | `view.spec.ts` | the narrator menu, isolating and stacking narrators, and what survives a refresh |
 | `mobile.spec.ts` | the sheet, the long press, and the isolation bar's geometry on a 390px screen |
@@ -314,7 +344,7 @@ src/
   graph/         selection → graph, and the layout worker
   scene/         three.js rendering: instanced nodes, additive edges, glow
   state/         the store, and what of it survives a refresh
-  ui/            selection sidebar, biography panel, hadith reader, node menu
+  ui/            selection sidebar, narrator search, biography panel, reader, menu
 tests/           browser tests, run against the built site
 tools/ingest/
   books.ts       the catalogue — add a collection here

@@ -3,6 +3,22 @@ import { useStore } from '../state/store';
 import { HadithRefs } from './HadithRefs';
 import { Sira } from './Sira';
 
+/**
+ * The name, without the disagreement about it.
+ *
+ * 351 of the 8,084 records carry the rijāl literature's apparatus inside the
+ * full name — `عبد الرحمن بن صخر ، وقيل : عبد الرحمن بن غنم ، وقيل : …`, which
+ * for Abū Hurayra runs to fourteen alternatives and fills a phone screen before
+ * a word of biography. The heading takes the reading up to the first `وقيل`;
+ * the whole of it stays on the heading's title, and the variants the chains
+ * actually use are listed further down the panel anyway.
+ */
+const APPARATUS = /\s*[،,]?\s*(?:ويقال|وقيل|وقال|:)\s/u;
+
+function settledName(name: string): string {
+  return name.split(APPARATUS)[0].trim();
+}
+
 function Row({ label, value }: { label: string; value?: string }) {
   if (!value) return null;
   return (
@@ -47,7 +63,9 @@ export function NarratorPanel() {
 
       <header className="detail__head">
         <div className="detail__names">
-          <h2 className="detail__ar">{bio?.fullNameAr ?? entry.ar}</h2>
+          <h2 className="detail__ar" title={bio?.fullNameAr ?? entry.ar}>
+            {settledName(bio?.fullNameAr ?? entry.ar)}
+          </h2>
           {bio?.fullNameEn || entry.en ? (
             <p className="detail__en">{bio?.fullNameEn ?? entry.en}</p>
           ) : null}
