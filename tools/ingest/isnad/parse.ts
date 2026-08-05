@@ -18,7 +18,13 @@
  * always show what a reading was based on.
  */
 
-import { stripDiacritics, stripEditorial, stripHonorifics, normaliseKey } from './arabic.js';
+import {
+  AR_LETTERS,
+  stripDiacritics,
+  stripEditorial,
+  stripHonorifics,
+  normaliseKey,
+} from './arabic.js';
 
 /** Lookup tables for `عن أبيه` / `عن جده` style references. */
 export interface RelativeMaps {
@@ -51,7 +57,14 @@ export interface ParsedIsnad {
 // (normalising would merge the preposition على into the name علي).
 const A = '[أاإآ]';
 const Y = '[يى]';
-const AR = '؀-ۿ';
+/*
+  Word boundaries are drawn around letters, not around the Arabic block: the
+  block also holds the script's punctuation, so a range across all of it reads
+  `وقال،` as one unbroken word and no boundary fires. Editions attach that
+  comma directly to the word, which is how `قال عبد أخبرني وقال، الآخران` left
+  `وقال` standing in a chain as if it were a man.
+*/
+const AR = AR_LETTERS;
 
 /**
  * `أن فلانا أخبره` and `أن فلانا قال` put the narrator *before* the verb.
@@ -105,9 +118,16 @@ const VERB_RE = new RegExp(
   'gu',
 );
 
-/** Words and punctuation that terminate a narrator span. */
+/**
+ * Words and punctuation that terminate a narrator span.
+ *
+ * The speech verbs take an optional و/ف, which editions attach directly:
+ * `وقال الآخران` is the compiler noting what his other teachers said, and
+ * without the prefix here the whole phrase was read as the next narrator —
+ * that one shape alone accounted for 121 chains.
+ */
 const SEGMENT_END_RE = new RegExp(
-  `[،؛,\\n"«»]|(?<![${AR}])(?:قال|قالت|قالوا|${A}نه|${A}نها|${A}نهم|${A}ن|يقول|تقول|يحدث|تحدث|يقولون|كان|كانت|قر${A}|سمعته|بينا|بينما)(?![${AR}])`,
+  `[،؛,\\n"«»]|(?<![${AR}])(?:[وف]?(?:قال|قالت|قالوا|يقول|تقول|يقولون|يحدث|تحدث|كان|كانت|قر${A}|سمعته)|${A}نه|${A}نها|${A}نهم|${A}ن|بينا|بينما)(?![${AR}])`,
   'u',
 );
 
@@ -162,6 +182,14 @@ const NOT_A_NAME = new Set(
     'اخرين',
     'نفر',
     'اناس',
+    'رجلا',
+    'رجلين',
+    // `عن الثقة` is a critic declining to name his source, not a name.
+    'الثقه',
+    'ثقه',
+    'بذلك',
+    'بلغه',
+    'بلغني',
   ].map(normaliseKey),
 );
 
@@ -192,6 +220,18 @@ const NARRATIVE_TOKENS = new Set([
   'فقال',
   'فقلت',
   'قلت',
+  // `عن قوله` is "about his statement", not "from Qawluhu". The preposition
+  // that carries a chain is the same word that asks after a wording, and
+  // nobody is named for an act of speech — so these end a span wherever they
+  // appear in it.
+  'قول',
+  'قوله',
+  'قولها',
+  'قولهم',
+  'قولك',
+  'حديثه',
+  'حديثها',
+  'حديثهم',
   'يزعم',
   'فاذا',
   'حدثه',
@@ -200,6 +240,20 @@ const NARRATIVE_TOKENS = new Set([
   'الا',
   'او',
 ]);
+
+/**
+ * Everything above, as whole spans, for the rijal database to refuse as well.
+ *
+ * A handful of upstream profiles were sliced out of the prose around them and
+ * carry a function word as their entire name — one is filed under `قوله`, with
+ * Abū Ḥanīfa's biography still inside it. That made the word *attested*, and an
+ * attested span is one this parser will accept as a name however little it
+ * looks like one, which is how `سألت يحيى بن يحيى عن قوله` — "I asked Yaḥyā
+ * about his wording" — put Abū Ḥanīfa in a chain of transmission.
+ */
+export const NON_NAME_SPANS = new Set(
+  [...NOT_A_NAME, ...NARRATIVE_TOKENS].map(normaliseKey),
+);
 
 /** Kin references that need the preceding narrator to resolve. */
 const KIN: Record<string, keyof RelativeMaps> = {
@@ -243,7 +297,10 @@ const MAX_NAME_WORDS = 9;
 
 /** Trim a raw span down to something that could be a name. */
 function cleanName(span: string): string {
-  let name = stripEditorial(stripHonorifics(span));
+  // A comma inside a span is an artefact of the scrape, not a boundary — the
+  // span was cut at a real one before it got here. Left in, `ابن، وهب` is a
+  // different name from `ابن وهب` and matches nobody.
+  let name = stripEditorial(stripHonorifics(span)).replace(/[،,]/gu, ' ');
   name = name.replace(/^(?:و|ف|ثم|قد)\s+/u, '');
   name = name.replace(/\s+(?:قال|قالت|رحمه|يقول)\s*$/u, '');
   // Adverbs an editor appends when the same narrator recurs.
@@ -251,6 +308,39 @@ function cleanName(span: string): string {
   name = name.replace(/^\s*عن\s+/u, '');
   name = name.replace(/\s+و\s*$/u, '');
   return name.trim();
+}
+
+/**
+ * A span that ends on a word which governs the one after it: `ابن`, `بن`,
+ * `أبو`, `عبد`. No name ends here, so whatever follows belongs to it.
+ */
+const DANGLING_RE = new RegExp(
+  `(?:^|\\s)(?:بن|${A}بن|${A}ب[وي]|${A}م|عبد|بنت|ذو|ذي)\\s*$`,
+  'u',
+);
+
+/**
+ * Cut the span where the name ends — stepping over a comma dropped inside one.
+ *
+ * The scraped editions print `عَنِ ابْنِ، شِهَابٍ` and `حَدَّثَنَا مُوسَى بْنُ،
+ * إِسْمَاعِيلَ`: the comma lands between a word and the word it governs. Cut
+ * there and the chain gains a narrator called `ابن` — 96 chains ran through
+ * that one — while the man himself goes unnamed. A verb is a real ending and
+ * still stops the span; only a comma is stepped over, and only when the span
+ * cannot possibly have ended.
+ */
+function cutSegment(segment: string): string {
+  let from = 0;
+  for (let hops = 0; hops < 4; hops++) {
+    const at = segment.slice(from).search(SEGMENT_END_RE);
+    if (at < 0) break;
+    const cut = from + at;
+    const head = segment.slice(0, cut);
+    if (!DANGLING_RE.test(head)) return head;
+    if (!/^[،,]/u.test(segment.slice(cut))) return head;
+    from = cut + 1;
+  }
+  return segment;
 }
 
 /** Cut a trailing prepositional phrase, but never at the first word. */
@@ -333,8 +423,7 @@ export function parseIsnad(arabic: string, options: ParseOptions = {}): ParsedIs
       truncatedAtTahwil = true;
     }
 
-    const endAt = segment.search(SEGMENT_END_RE);
-    if (endAt >= 0) segment = segment.slice(0, endAt);
+    segment = cutSegment(segment);
 
     let name = cutTrailingPhrase(cleanName(segment));
 

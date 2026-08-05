@@ -14,6 +14,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { NarratorGrade, RijalVerdict } from '../../../src/corpus/types.js';
 import { normaliseKey, parseDeathYear, stripDiacritics } from '../isnad/arabic.js';
+import { NON_NAME_SPANS } from '../isnad/parse.js';
 import { RIJAL_WORKS, parseTabaqa } from './sources.js';
 
 const GRADE_FILES: { file: string; grade: NarratorGrade }[] = [
@@ -240,6 +241,10 @@ export class RijalDatabase {
     this.profiles.set(id, profile);
     for (const naming of namings) {
       const key = normaliseKey(naming);
+      // A profile whose whole name is a function word was sliced out of the
+      // prose around it upstream. The profile is kept — there is a real man
+      // inside it — but it cannot be found under a name like that.
+      if (NON_NAME_SPANS.has(key)) continue;
       const bucket = this.byName.get(key);
       if (bucket) bucket.push(id);
       else this.byName.set(key, [id]);

@@ -11,6 +11,16 @@ const DIACRITICS =
   /[\u0610-\u061A\u064B-\u065F\u0670\u06D6-\u06DC\u06DF-\u06E8\u06EA-\u06ED]/g;
 const TATWEEL = /\u0640/g;
 
+/**
+ * Arabic *letters*, as a character-class body.
+ *
+ * Deliberately not the Arabic block: that also carries the script's own
+ * punctuation — the comma ، is U+060C — and treating punctuation as part of a
+ * word makes `ابن، وهب` a different name from `ابن وهب` and puts a word
+ * boundary in the wrong place.
+ */
+export const AR_LETTERS = 'ء-غـ-يٮ-ۓەۥۦۮۯۺ-ۿ';
+
 /** Strip vowel marks and the kashida used for typographic stretching. */
 export function stripDiacritics(text: string): string {
   return text.replace(DIACRITICS, '').replace(TATWEEL, '');
@@ -27,7 +37,7 @@ export function normaliseKey(text: string): string {
     .replace(/ة/g, 'ه') // ة -> ه
     .replace(/ؤ/g, 'و') // ؤ -> و
     .replace(/ئ/g, 'ي') // ئ -> ي
-    .replace(/[^؀-ۿ\s]/g, ' ')
+    .replace(new RegExp(`[^${AR_LETTERS}\\s]`, 'gu'), ' ')
     .replace(/\s+/g, ' ')
     .trim();
 }
