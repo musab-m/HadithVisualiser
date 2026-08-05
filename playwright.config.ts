@@ -4,8 +4,8 @@ import { defineConfig, devices } from '@playwright/test';
  * The suite runs against the built site, not the dev server: `dist/` is what
  * gets deployed, and a bundling or base-path mistake only shows up there.
  *
- * Timeouts are generous on purpose. The whole corpus is 49,821 chains through
- * 8,217 narrators, and the first layout is a real force relaxation; on a CI
+ * Timeouts are generous on purpose. The whole corpus is 49,823 chains through
+ * 8,084 narrators, and the first layout is a real force relaxation; on a CI
  * runner without a GPU, WebGL falls back to software rasterisation and frames
  * take hundreds of milliseconds. A tight timeout here fails on machine speed
  * rather than on the site being broken.

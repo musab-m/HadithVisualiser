@@ -1213,6 +1213,30 @@ input:focus-visible,
   transform: scaleX(-1);
 }
 
+/*
+  A link the chain does not actually make: the Prophet ﷺ heads the path, but
+  this report is not traced to him. The stroke is drawn rather than typed —
+  ↛ is missing from the UI face and would fall back to a different one, or to
+  nothing at all.
+*/
+.chain__arrow--broken {
+  position: relative;
+  color: #e0a458;
+  padding: 0 0.15rem;
+}
+
+.chain__arrow--broken::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 0.62rem;
+  height: 1.5px;
+  background: currentColor;
+  border-radius: 1px;
+  transform: translate(-50%, -50%) rotate(-58deg);
+}
+
 .reader__ar {
   font-family: var(--ar);
   font-size: 1.28rem;

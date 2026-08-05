@@ -17,7 +17,7 @@ be the same answer for him.
 You can look at one hadith, a chapter, several collections, or everything at once —
 or search the text and see every chain that carries a given wording.
 
-![The whole corpus: 49,821 chains through 8,204 narrators](docs/overview.png)
+![The whole corpus: 49,823 chains through 8,084 narrators](docs/overview.png)
 
 | One narrator | Three chains |
 | --- | --- |
@@ -152,7 +152,7 @@ None of those are visible to a unit test of the functions involved.
 | `mobile.spec.ts` | the sheet, the long press, and the isolation bar's geometry on a 390px screen |
 
 Most tests start from a saved view holding one small collection, so the graph
-settles in a second rather than relaxing 49,821 chains; `loads.spec.ts` is the
+settles in a second rather than relaxing 49,823 chains; `loads.spec.ts` is the
 one that pays for the whole corpus. Timeouts are deliberately loose — CI has no
 GPU, WebGL falls back to software, and a tight limit fails on machine speed
 rather than on anything being wrong.
@@ -229,8 +229,15 @@ through lookup tables; where they cannot be, the link is dropped rather than
 guessed at. This recovers a chain from **99.8%** of Sahih al-Bukhari and **100%**
 of Sahih Muslim.
 
+Word boundaries there are drawn around Arabic *letters*, not the Arabic block —
+the block also holds the script's own punctuation. The scraped editions print a
+comma in places no editor put one, both between a word and the word it governs
+(`عَنِ ابْنِ، شِهَابٍ`) and welded to a verb (`أَخْبَرَنِي وَقَالَ، الآخَرَانِ`).
+Treated as part of a word, the first hides Ibn Shihāb behind a narrator called
+`ابن` and the second puts `وقال` in a chain as though it were a man.
+
 **2 — Identify.** `tools/ingest/rijal/db.ts` matches each name against 115,735
-narrator profiles and their 196,488 recorded name variants. This is the hard part:
+narrator profiles and their 213,412 recorded name variants. This is the hard part:
 isnads name people the way specialists would — `سفيان`, `الزهري`, `ابن شهاب` — and
 hundreds of profiles can share a surface form. Chains are therefore resolved whole:
 unambiguous links are fixed first, then the biographical teacher/student records,

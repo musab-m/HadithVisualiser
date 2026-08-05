@@ -33,7 +33,7 @@ test.describe('the controls', () => {
 
   test('all and none select every collection and no collection', async ({ app: page }) => {
     // The one test that puts the whole corpus on screen. Without a GPU a click
-    // against 8,217 nodes takes tens of seconds, which is the machine rather
+    // against 8,085 nodes takes tens of seconds, which is the machine rather
     // than the site — so it is allowed to take its time, and it is the only
     // place that pays this.
     test.slow();
@@ -183,6 +183,37 @@ test.describe('the controls', () => {
     // property of the hadith rather than one man's judgement of it.
     await expect(grade.locator('.reader__grade-by')).toHaveText('al-Albānī');
     expect(await grade.getAttribute('title')).toContain('al-Albānī');
+  });
+
+  test('a chain that stops short of the Prophet says so in the chain itself', async ({
+    app: page,
+  }) => {
+    await openSidebar(page);
+    // Abu Dawud 4272 is Khālid ibn Dihqān asking a Follower what a word in the
+    // previous hadith meant. It is not traced to the Prophet, and 4271 — the
+    // hadith it is asking about, found by the same wording — is. One search
+    // reaches both.
+    await trace(page, 'اعتبط بقتله');
+
+    await page.getByRole('button', { name: 'abudawud:4272', exact: true }).click();
+    await expect(page.locator('.reader')).toBeVisible();
+    await expect(page.locator('.reader__grade--warn')).toBeVisible();
+
+    // The Prophet ﷺ heads every path drawn, because that is the frame a report
+    // is read in — but drawn as an ordinary arrow the first step would assert a
+    // hearing this chain does not claim. Exactly one link is struck through,
+    // and it is the one out of the Prophet.
+    await expect(page.locator('.chain__arrow--broken')).toHaveCount(1);
+    await expect(page.locator('.chain li').first().locator('.chain__arrow--broken')).toHaveCount(1);
+
+    // The reader is a sheet over the list on a phone, so it has to be put away
+    // before the next reference can be reached.
+    await page.locator('.reader').getByRole('button', { name: 'Close' }).click();
+    await page.getByRole('button', { name: 'abudawud:4271', exact: true }).click();
+    await expect(page.locator('.reader')).toBeVisible();
+    await expect(page.locator('.reader__grade--warn')).toHaveCount(0);
+    await expect(page.locator('.chain__arrow--broken')).toHaveCount(0);
+    await page.locator('.reader').getByRole('button', { name: 'Close' }).click();
   });
 
   test('the biography panel moves between narrators', async ({ app: page }) => {

@@ -29,6 +29,13 @@ export function HadithReader() {
   const text = texts.get(reading);
 
   const path = record ? [PROPHET_ID, ...record.chain, collectorId(slug)] : [];
+  /*
+    The Prophet ﷺ heads the path whether or not the chain reaches him, because
+    that is the frame every report is read in — but where it does not reach him
+    the first step is a gap, not a hearing. Drawn as an ordinary arrow it read
+    as a claim the chain does not make, so it is struck through.
+  */
+  const breaks = record ? !record.toProphet : false;
 
   return (
     <div className="reader" role="dialog" aria-label="Hadith">
@@ -71,7 +78,22 @@ export function HadithReader() {
                 <button className="chain__node" onClick={() => setFocus(id)}>
                   {entry?.ar ?? id}
                 </button>
-                {i < path.length - 1 ? <span className="chain__arrow" aria-hidden>→</span> : null}
+                {i < path.length - 1 ? (
+                  breaks && i === 0 ? (
+                    <span
+                      className="chain__arrow chain__arrow--broken"
+                      role="img"
+                      aria-label="broken link: the chain does not reach the Prophet"
+                      title="The chain as parsed stops short of the Prophet ﷺ — this report is traced no further back than the narrator beside it."
+                    >
+                      →
+                    </span>
+                  ) : (
+                    <span className="chain__arrow" aria-hidden>
+                      →
+                    </span>
+                  )
+                ) : null}
               </li>
             );
           })}

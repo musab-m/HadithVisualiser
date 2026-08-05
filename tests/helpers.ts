@@ -3,7 +3,7 @@ import { expect, type Locator, type Page } from '@playwright/test';
 /**
  * A collection small enough that the graph settles in a second or two. Most
  * tests are about whether a control does what it says, not about scale, and
- * running each of them against 49,821 chains would make the suite unusable.
+ * running each of them against 49,823 chains would make the suite unusable.
  */
 export const SMALL_BOOK = 'qudsi40';
 
