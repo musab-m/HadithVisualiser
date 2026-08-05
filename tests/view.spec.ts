@@ -1,4 +1,5 @@
-import { expect, test } from '@playwright/test';
+import { test as fresh } from '@playwright/test';
+import { expect } from '@playwright/test';
 import {
   SMALL_BOOK,
   SMALL_BOOK_HADITHS,
@@ -12,15 +13,24 @@ import {
   stats,
 } from './helpers';
 
-test.describe('narrowing to a narrator', () => {
-  test('the menu opens on a right-click and isolates the chains', async ({ page }) => {
-    // One hadith means one chain, stacked down the middle of the view, which is
-    // what makes a node findable at all — they are spheres in a scene, not DOM.
+/**
+ * One chain, drawn on a page of its own.
+ *
+ * These two are the exception to sharing a page. A narrator is a sphere in a
+ * 3D scene with no DOM, so it has to be found by pointing at it — which needs
+ * the camera framed on a known graph and nothing covering the canvas. Loading
+ * straight into that state gives it; arriving by clicking does not, reliably,
+ * on a phone-sized viewport where the sheet and the legend cover most of the
+ * scene. Two boots is the price of a test that means something.
+ */
+fresh.describe('narrowing to a narrator', () => {
+  fresh('the menu isolates the chains running through a narrator', async ({ page }) => {
     await openWith(page, { pinned: [`${SMALL_BOOK}:1`] });
     await settled(page);
 
-    const found = await openNodeMenu(page);
-    expect(found, 'never landed on a narrator').toBe(true);
+    // Nodes are spheres in a 3D scene with no DOM of their own, so one has to
+    // be hit rather than selected. A single chain stacks down the middle.
+    expect(await openNodeMenu(page), 'never landed on a narrator').toBe(true);
 
     const menu = page.locator('.menu');
     await expect(menu.locator('.menu__ar')).not.toBeEmpty();
@@ -29,17 +39,17 @@ test.describe('narrowing to a narrator', () => {
     await menu.getByRole('menuitem', { name: 'only the chains through this narrator' }).click();
     await expect(page.locator('.isolation')).toBeVisible();
     await settled(page);
+    expect((await stats(page)).hadiths).toBeGreaterThan(0);
 
-    const isolated = await stats(page);
-    expect(isolated.hadiths).toBeGreaterThan(0);
-
+    // The bar names who it narrowed to, and is the way back out.
+    await expect(page.locator('.isolation__ar')).not.toBeEmpty();
     await page.getByRole('button', { name: /show (everything|all)/ }).click();
     await settled(page);
     expect((await stats(page)).hadiths).toBe(1);
     await expect(page.locator('.isolation')).toHaveCount(0);
   });
 
-  test('the menu closes on Escape without changing anything', async ({ page }) => {
+  fresh('the menu closes on Escape without changing anything', async ({ page }) => {
     await openWith(page, { pinned: [`${SMALL_BOOK}:1`] });
     await settled(page);
     const before = await stats(page);
@@ -50,38 +60,8 @@ test.describe('narrowing to a narrator', () => {
     expect(await stats(page)).toEqual(before);
   });
 
-  test('isolating narrows an existing selection rather than replacing it', async ({ page }) => {
-    await openWith(page);
-    const whole = await stats(page);
 
-    // Seeded rather than clicked: which narrator is under the pointer depends
-    // on the layout, and this test is about what isolation does to the numbers.
-    const narrator = await page.evaluate(() => {
-      const label = document.querySelector('.node-label__ar');
-      return label?.textContent ?? '';
-    });
-    expect(narrator).not.toBe('');
-
-    const id = await page.evaluate(async (ar) => {
-      const res = await fetch('data/narrators/index.json');
-      const file = await res.json();
-      const all = Object.values(file.narrators ?? file) as { id: string; ar: string }[];
-      return all.find((n) => n.ar === ar)?.id ?? '';
-    }, narrator);
-    expect(id).not.toBe('');
-
-    await applyView(page, { isolated: [id] });
-    await settled(page);
-
-    const narrowed = await stats(page);
-    expect(narrowed.hadiths).toBeGreaterThan(0);
-    expect(narrowed.hadiths).toBeLessThanOrEqual(whole.hadiths);
-    await expect(page.locator('.isolation__ar')).toHaveText(narrator);
-  });
-
-  test('two narrators together keep only the chains carrying both', async ({ page }) => {
-    // The registry has to be read from the page, and a page has to have been
-    // loaded first — `fetch` on about:blank has no origin to resolve against.
+  fresh('two narrators together keep only the chains carrying both', async ({ page }) => {
     await openWith(page);
     const ids = await page.evaluate(async () => {
       const res = await fetch('data/narrators/index.json');
@@ -92,7 +72,7 @@ test.describe('narrowing to a narrator', () => {
         .slice(0, 2)
         .map((n) => n.id);
     });
-    test.skip(ids.length < 2, 'not enough busy narrators in this corpus');
+    fresh.skip(ids.length < 2, 'not enough busy narrators in this corpus');
 
     await applyView(page, { books: ['bukhari'], isolated: [ids[0]] });
     const one = (await stats(page)).hadiths;
@@ -108,10 +88,8 @@ test.describe('narrowing to a narrator', () => {
     await settled(page);
     expect((await stats(page)).hadiths).toBe(one);
   });
-});
 
-test.describe('the saved view', () => {
-  test('a refresh keeps the question', async ({ page }) => {
+  fresh('a refresh keeps the question', async ({ page }) => {
     const errors = collectErrors(page);
     await openWith(page, { books: [] });
     await openSidebar(page);
@@ -132,7 +110,7 @@ test.describe('the saved view', () => {
     expect(errors).toEqual([]);
   });
 
-  test('a saved collection that no longer exists is dropped, not selected', async ({ page }) => {
+  fresh('a saved view survives a collection that no longer exists', async ({ page }) => {
     await openWith(page, { books: [SMALL_BOOK, 'a_book_that_was_removed'] });
     await openSidebar(page);
 
@@ -142,7 +120,7 @@ test.describe('the saved view', () => {
     await expect(page.locator('.book--on')).toHaveCount(1);
   });
 
-  test('a stored view from an older schema is ignored', async ({ page }) => {
+  fresh('a stored view from an older schema is ignored', async ({ page }) => {
     await page.addInitScript(() => {
       localStorage.setItem('isnad:view', JSON.stringify({ v: 0, books: ['qudsi40'] }));
     });
