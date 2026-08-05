@@ -181,9 +181,19 @@ function Labels({ graph, layout }: LabelProps) {
         const id = graph.ids[i];
         const entry = narrators.get(id);
         const emphasis = id === hover || id === focus;
-        // Neighbours in a layer sit close enough that their labels would
-        // overlap; stagger the height so both stay readable.
-        const lift = layout.spacing * (0.5 + (n % 3) * 0.34);
+        // Sit the name just clear of its own node rather than a fixed distance
+        // above the layer. The gap used to be a share of the space between
+        // generations, which on a busy layer left a name floating far enough
+        // from its node that it read as belonging to something else — and it
+        // ignored how large the node is, so the biggest transmitters, whose
+        // names matter most, were the furthest from theirs.
+        //
+        // Mirrors the radius the renderer gives each node, plus a little air.
+        const radius = layout.spacing * 0.16 * (1 + Math.log1p(graph.weight[i]) * 0.32);
+        // Neighbours in a layer sit close enough that their labels would still
+        // collide, so keep a small stagger — much smaller than the old one,
+        // which was doing the work of both jobs at once.
+        const lift = radius * 1.05 + layout.spacing * (0.03 + (n % 3) * 0.07);
         return (
           <Html
             key={id}
