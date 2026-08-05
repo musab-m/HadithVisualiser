@@ -118,7 +118,7 @@ None of those are visible to a unit test of the functions involved.
 
 | | |
 | --- | --- |
-| `loads.spec.ts` | the corpus fetches and draws; the canvas has a live GL context; the page has headings, names on every control, and a tab order that reaches them |
+| `loads.spec.ts` | the corpus fetches and draws; the canvas has a live GL context; the page has headings, names on every control, a tab order that reaches them, and text that clears WCAG AA against whatever is behind it |
 | `controls.spec.ts` | every button and link — collections, chapters, pins, the reader, the biography, the legend — and a check that nothing on screen is covering anything else |
 | `search.spec.ts` | Arabic and English queries, the phrase-only scope, clearing, a query that matches nothing, paging, and composing with the collection filter |
 | `view.spec.ts` | the narrator menu, isolating and stacking narrators, and what survives a refresh |

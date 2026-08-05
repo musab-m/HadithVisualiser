@@ -1,14 +1,25 @@
 :root {
+  /*
+    Three weights of text, each a step quieter than the last. Measured against
+    the panels rather than chosen by eye: on this background they come out at
+    15.8, 10.2 and 6.1 to one, so the quietest — which carries the counts, the
+    hints and the legend, all of it small — still clears the 4.5 that small
+    text needs. It used to sit at 4.2, which is where "grey on black" stops
+    being a style and starts being unreadable.
+  */
   --ink: #e8ecf6;
-  --ink-soft: #9aa6bf;
-  --ink-faint: #6b7793;
+  --ink-soft: #b6c0d6;
+  --ink-faint: #8593b0;
   --void: #070a12;
   --panel: rgba(13, 18, 30, 0.82);
   --panel-solid: #0d121e;
   --edge: rgba(150, 172, 214, 0.14);
   --edge-strong: rgba(150, 172, 214, 0.3);
+  /* Strong enough to read as the outline of something you can press. */
+  --edge-action: rgba(150, 172, 214, 0.26);
   --gold: #d8b26a;
   --gold-soft: rgba(216, 178, 106, 0.16);
+  --gold-line: rgba(216, 178, 106, 0.45);
 
   --ui: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
   --ar: 'Amiri', 'Scheherazade New', 'Times New Roman', serif;
@@ -44,6 +55,20 @@ button {
   background: none;
   border: none;
   cursor: pointer;
+}
+
+/*
+  Only the checkboxes had a focus ring, so tabbing through the panels left no
+  trace of where you were. `:focus-visible` keeps it to keyboard use — a ring
+  appearing under every mouse click reads as a rendering fault.
+*/
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+[role='menuitem']:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+  border-radius: 4px;
 }
 
 .app {
@@ -216,12 +241,17 @@ button {
   margin: 0;
 }
 
+/*
+  Everything below carries its affordance at rest rather than on hover. Hover
+  does not exist on a phone, so a control that only announces itself when a
+  pointer is over it announces itself to nobody there.
+*/
 .link {
   font-size: 0.7rem;
   color: var(--gold);
   padding: 0;
   letter-spacing: 0.03em;
-  border-bottom: 1px solid transparent;
+  border-bottom: 1px solid var(--gold-line);
 }
 
 .link:hover {
@@ -336,9 +366,10 @@ button {
 
 .book__expand {
   font-size: 0.65rem;
-  color: var(--ink-faint);
+  color: var(--ink-soft);
   margin: 0.45rem 0 0 1.35rem;
   letter-spacing: 0.05em;
+  border-bottom: 1px dotted var(--edge-action);
 }
 
 .book__expand:hover {
@@ -461,20 +492,28 @@ button {
   overflow-y: auto;
 }
 
+/*
+  These are the hadiths you can pick, and they used to be an undecorated list
+  of text — the one place the feedback named. An outline and a background give
+  them the shape of something choosable before it is touched.
+*/
 .picker__result {
   width: 100%;
   display: flex;
   gap: 0.6rem;
   align-items: baseline;
-  padding: 0.4rem 0.5rem;
+  padding: 0.45rem 0.55rem;
   border-radius: 6px;
+  border: 1px solid var(--edge-action);
+  background: rgba(150, 172, 214, 0.05);
   font-size: 0.73rem;
-  color: var(--ink-soft);
+  color: var(--ink);
   text-align: left;
 }
 
 .picker__result:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--gold-soft);
+  border-color: var(--gold-line);
   color: var(--ink);
 }
 
@@ -551,8 +590,8 @@ button {
   letter-spacing: 0.04em;
   padding: 0.35rem 0.5rem;
   border-radius: 6px;
-  border: 1px solid var(--edge);
-  color: var(--ink-faint);
+  border: 1px solid var(--edge-action);
+  color: var(--ink-soft);
 }
 
 .scope--on {
@@ -603,7 +642,9 @@ button {
   font-size: 0.66rem;
   font-variant-numeric: tabular-nums;
   padding: 0.22rem 0.45rem;
-  color: var(--ink-faint);
+  border-radius: 5px;
+  border: 1px solid var(--edge-action);
+  color: var(--ink-soft);
 }
 
 .found__hit:hover {
@@ -615,8 +656,8 @@ button {
   letter-spacing: 0.06em;
   text-transform: uppercase;
   padding: 0.22rem 0.4rem;
-  color: var(--ink-faint);
-  border-left: 1px solid var(--edge);
+  color: var(--ink-soft);
+  border-left: 1px solid var(--edge-action);
 }
 
 .found__only:hover {
@@ -851,8 +892,8 @@ button {
   font-size: 0.92rem;
   padding: 0.22rem 0.55rem;
   border-radius: 6px;
-  border: 1px solid var(--edge);
-  color: var(--ink-soft);
+  border: 1px solid var(--edge-action);
+  color: var(--ink);
   direction: rtl;
 }
 
@@ -895,8 +936,8 @@ button {
   font-variant-numeric: tabular-nums;
   padding: 0.22rem 0.45rem;
   border-radius: 5px;
-  border: 1px solid var(--edge);
-  color: var(--ink-faint);
+  border: 1px solid var(--edge-action);
+  color: var(--ink-soft);
 }
 
 .hadith-ref:hover {
@@ -1026,7 +1067,9 @@ button {
   font-size: 1rem;
   padding: 0.15rem 0.4rem;
   border-radius: 5px;
-  color: var(--ink-soft);
+  /* Each name in the chain opens that narrator; underlining says so. */
+  border-bottom: 1px solid var(--edge-action);
+  color: var(--ink);
 }
 
 .chain__node:hover {
@@ -1112,7 +1155,8 @@ button {
 
 .legend__keys--links em {
   font-style: italic;
-  color: rgba(107, 119, 147, 0.85);
+  /* The old faint grey at 85% opacity came out at 3.5 to one. */
+  color: var(--ink-faint);
 }
 
 .legend__dash {
@@ -1181,7 +1225,7 @@ button {
   font-family: var(--ar);
   font-size: 0.92rem;
   line-height: 1.25;
-  color: rgba(219, 229, 250, 0.72);
+  color: rgba(226, 234, 252, 0.92);
   /* The graph behind a label can be anything from empty space to a blown-out
      core, so the label carries its own backdrop rather than relying on one. */
   padding: 0.05rem 0.4rem;
@@ -1212,10 +1256,17 @@ button {
   transform: translateY(-50%);
   white-space: nowrap;
   font-family: var(--ui);
-  font-size: 0.58rem;
+  font-size: 0.6rem;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: rgba(154, 166, 191, 0.5);
+  /*
+    These sit directly on the scene with no backdrop of their own. Half-opacity
+    grey over a near-black canvas came out around two and a half to one, which
+    is why the generation numbers were among the hardest things here to read.
+    Solid, with a shadow to hold them apart from whatever is behind.
+  */
+  color: var(--ink-faint);
+  text-shadow: 0 1px 5px rgba(0, 0, 0, 0.95), 0 0 2px rgba(0, 0, 0, 0.8);
   user-select: none;
   padding-left: 0.5rem;
   display: flex;
@@ -1225,7 +1276,7 @@ button {
 
 .band-label__n {
   font-variant-numeric: tabular-nums;
-  color: rgba(107, 119, 147, 0.65);
+  color: var(--ink-soft);
   letter-spacing: 0.02em;
 }
 
