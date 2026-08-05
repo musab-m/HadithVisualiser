@@ -10,6 +10,9 @@ The Prophet ﷺ sits at the apex. Each layer below is a generation of transmitte
 who heard from the layer above. The compilers — al-Bukhārī, Muslim, Mālik — are at
 the floor. Click any narrator to read their biography, the verdicts classical
 critics passed on them, who they heard from and taught, and the chains they carry.
+The node at the apex opens the sīra in outline instead — lineage, family, the
+hijra, the campaigns — since a grade, a generation and a list of chains would all
+be the same answer for him.
 
 You can look at one hadith, a chapter, several collections, or everything at once —
 or search the text and see every chain that carries a given wording.
@@ -356,6 +359,12 @@ Itqan — Ibn Ḥajar's *Taqrīb al-Tahdhīb* and *Tahdhīb al-Tahdhīb*, al-Miz
 *al-Thiqāt*, al-Dhahabī's *Mīzān al-Iʿtidāl*, *al-Kāshif* and *Siyar Aʿlām
 al-Nubalāʾ*, Ibn Saʿd's *Ṭabaqāt*, Ibn ʿAdī's *al-Kāmil*, and others. Each is
 attributed to its work and author where shown.
+
+One thing in the app is not derived from the corpus: the sīra outline shown when
+the Prophet ﷺ is opened, in `src/ui/sira.ts`. It is written from the standard sīra
+— Ibn Isḥāq in Ibn Hishām's recension, Ibn Saʿd's *Ṭabaqāt*, al-Ṭabarī — and says
+so on the panel itself. Where those sources differ, it says that rather than
+picking.
 
 The isnad parser's approach, and the kinship and kunya tables it uses, follow
 Itqan's `parse_isnad_chains.py`; the parser here is a separate implementation in

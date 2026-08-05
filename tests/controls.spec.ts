@@ -147,9 +147,18 @@ test.describe('the controls', () => {
     // fetch the chunk it was pointed at.
     await expect(reader.locator('.reader__ar')).not.toBeEmpty();
 
-    // Every narrator in the chain is a way into their biography.
+    // Every narrator in the chain is a way into their biography. The first is
+    // always the Prophet ﷺ, whose panel carries the sīra instead: the rows the
+    // others get would all read the same for him, and the hadiths passing
+    // through him are the corpus.
     await reader.locator('.chain__node').first().click();
-    await expect(page.locator('.detail')).toBeVisible();
+    const detail = page.locator('.detail');
+    await expect(detail).toBeVisible();
+    await expect(detail).toContainText('Name and lineage');
+    await expect(detail).toContainText('The hijra');
+    await expect(detail.locator('.row')).toHaveCount(0);
+    await expect(detail.locator('.hadith-ref')).toHaveCount(0);
+
     await page.locator('.detail__close').click();
     await expect(page.locator('.detail')).toHaveCount(0);
 
@@ -180,7 +189,9 @@ test.describe('the controls', () => {
     await openSidebar(page);
     await trace(page, 'mercy');
     await page.locator('.hadith-ref').first().click();
-    await page.locator('.chain__node').first().click();
+    // Not the first node — that one is the Prophet ﷺ, and his panel is the
+    // sīra, which has no one to move on to.
+    await page.locator('.chain__node').nth(1).click();
 
     const detail = page.locator('.detail');
     await expect(detail).toBeVisible();
