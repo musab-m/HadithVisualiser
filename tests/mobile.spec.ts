@@ -203,6 +203,10 @@ test.describe('on a phone', () => {
 
     // Only sheets that are actually open: at rest the sidebar is parked below
     // the fold on purpose, and measuring it there says nothing.
+    //
+    // Polled rather than measured once: a sheet rises into place from 14px
+    // below over a quarter of a second, so a single reading taken the moment it
+    // becomes visible catches it mid-animation and reports exactly that 14px.
     const spill = () =>
       page.evaluate(() => {
         const view = window.visualViewport;
@@ -216,17 +220,19 @@ test.describe('on a phone', () => {
           .filter((r) => r.over > 1);
       });
 
-    expect(await spill(), 'the controls sheet runs past the bottom').toEqual([]);
+    await expect
+      .poll(spill, { message: 'the controls sheet runs past the bottom' })
+      .toEqual([]);
 
     // The reader and the biography are the two that a browser bar across the
     // bottom would eat, which is the case that started this.
     await page.locator('.hadith-ref').first().click();
     await expect(page.locator('.reader')).toBeVisible();
-    expect(await spill(), 'the reader runs past the bottom').toEqual([]);
+    await expect.poll(spill, { message: 'the reader runs past the bottom' }).toEqual([]);
 
     await page.locator('.chain__node').first().click();
     await expect(page.locator('.detail')).toBeVisible();
-    expect(await spill(), 'the biography runs past the bottom').toEqual([]);
+    await expect.poll(spill, { message: 'the biography runs past the bottom' }).toEqual([]);
   });
 
 });
