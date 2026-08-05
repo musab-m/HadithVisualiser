@@ -1,6 +1,7 @@
 import { GENERATION_SOURCE_LABEL, GRADE_COLOR, GRADE_LABEL, PROPHET_ID } from '../corpus/types';
 import { useStore } from '../state/store';
 import { HadithRefs } from './HadithRefs';
+import { Sira } from './Sira';
 
 function Row({ label, value }: { label: string; value?: string }) {
   if (!value) return null;
@@ -59,129 +60,143 @@ export function NarratorPanel() {
         ) : null}
       </header>
 
-      {bio?.note ? <p className="detail__note">{bio.note}</p> : null}
+      {/*
+        For the Prophet ﷺ every row below carries the same answer for the same
+        reason — no grade, generation zero, every chain — and the hadiths
+        passing through him are the whole corpus. So his panel gives the sīra
+        in outline rather than restating the shape of the graph.
+      */}
+      {isProphet ? (
+        <Sira chains={entry.n} />
+      ) : (
+        <>
+          {bio?.note ? <p className="detail__note">{bio.note}</p> : null}
 
-      <dl className="rows">
-        <Row label="Kunya" value={bio?.kunya} />
-        <Row label="Laqab" value={bio?.laqab} />
-        <Row label="Nasab" value={bio?.nasab} />
-        <Row label="Ṭabaqa" value={bio?.tabaqatAr} />
-        <Row label="Settled in" value={bio?.city} />
-        <Row label="Died" value={bio?.diedRaw ?? (entry.d ? `${entry.d} AH` : undefined)} />
-        {/*
-          Where no scholar graded a transmitter directly, the database records
-          how the grade was arrived at instead. That is not a verdict and must
-          not be labelled as one.
-         */}
-        <Row
-          label={bio?.gradeAr?.includes('استنباط') ? 'Grading derived from' : 'Verdict in Arabic'}
-          value={bio?.gradeAr}
-        />
-        <Row
-          label="Generation"
-          value={
-            entry.gen === 0
-              ? 'the origin of every chain'
-              : `${entry.gen} — ${GENERATION_SOURCE_LABEL[entry.gf] ?? 'from the chains'}`
-          }
-        />
-        <Row
-          label="In this corpus"
-          value={`${entry.n.toLocaleString()} ${entry.n === 1 ? 'chain' : 'chains'}`}
-        />
-      </dl>
+          <dl className="rows">
+            <Row label="Kunya" value={bio?.kunya} />
+            <Row label="Laqab" value={bio?.laqab} />
+            <Row label="Nasab" value={bio?.nasab} />
+            <Row label="Ṭabaqa" value={bio?.tabaqatAr} />
+            <Row label="Settled in" value={bio?.city} />
+            <Row label="Died" value={bio?.diedRaw ?? (entry.d ? `${entry.d} AH` : undefined)} />
+            {/*
+              Where no scholar graded a transmitter directly, the database
+              records how the grade was arrived at instead. That is not a
+              verdict and must not be labelled as one.
+             */}
+            <Row
+              label={
+                bio?.gradeAr?.includes('استنباط') ? 'Grading derived from' : 'Verdict in Arabic'
+              }
+              value={bio?.gradeAr}
+            />
+            <Row
+              label="Generation"
+              value={`${entry.gen} — ${GENERATION_SOURCE_LABEL[entry.gf] ?? 'from the chains'}`}
+            />
+            <Row
+              label="In this corpus"
+              value={`${entry.n.toLocaleString()} ${entry.n === 1 ? 'chain' : 'chains'}`}
+            />
+          </dl>
 
-      {bio?.verdicts?.length ? (
-        <section className="detail__section">
-          <h3>Assessments in ʿilm ar-rijāl</h3>
-          <ul className="verdicts">
-            {bio.verdicts.map((verdict) => (
-              <li key={verdict.key}>
-                <div className="verdict__work">
-                  {verdict.work}
-                  {verdict.author ? <span className="verdict__author">{verdict.author}</span> : null}
-                </div>
-                <div className="verdict__grade">
-                  {verdict.gradeAr ? <span className="verdict__ar">{verdict.gradeAr}</span> : null}
-                  {verdict.gradeEn ? (
-                    <span
-                      className="verdict__en"
-                      style={{ ['--grade' as string]: GRADE_COLOR[verdict.gradeEn] }}
-                    >
-                      {GRADE_LABEL[verdict.gradeEn]}
-                    </span>
-                  ) : null}
-                </div>
-              </li>
-            ))}
-          </ul>
-        </section>
-      ) : null}
-
-      {bio?.variants?.length && bio.variants.length > 1 ? (
-        <section className="detail__section">
-          <h3>Named in the chains as</h3>
-          <p className="variants">{bio.variants.join(' · ')}</p>
-        </section>
-      ) : null}
-
-      {bio?.teachers?.length || bio?.students?.length ? (
-        <section className="detail__section">
-          <h3>Transmission circle</h3>
-          {bio.teachers?.length ? (
-            <div className="circle">
-              <span className="circle__label">Heard from</span>
-              <div className="chips">
-                {bio.teachers.map((id) => (
-                  <button key={id} className="chip" onClick={() => setFocus(id)}>
-                    {narrators.get(id)?.ar ?? id}
-                  </button>
+          {bio?.verdicts?.length ? (
+            <section className="detail__section">
+              <h3>Assessments in ʿilm ar-rijāl</h3>
+              <ul className="verdicts">
+                {bio.verdicts.map((verdict) => (
+                  <li key={verdict.key}>
+                    <div className="verdict__work">
+                      {verdict.work}
+                      {verdict.author ? (
+                        <span className="verdict__author">{verdict.author}</span>
+                      ) : null}
+                    </div>
+                    <div className="verdict__grade">
+                      {verdict.gradeAr ? (
+                        <span className="verdict__ar">{verdict.gradeAr}</span>
+                      ) : null}
+                      {verdict.gradeEn ? (
+                        <span
+                          className="verdict__en"
+                          style={{ ['--grade' as string]: GRADE_COLOR[verdict.gradeEn] }}
+                        >
+                          {GRADE_LABEL[verdict.gradeEn]}
+                        </span>
+                      ) : null}
+                    </div>
+                  </li>
                 ))}
-              </div>
-            </div>
+              </ul>
+            </section>
           ) : null}
-          {bio.students?.length ? (
-            <div className="circle">
-              <span className="circle__label">Transmitted to</span>
-              <div className="chips">
-                {bio.students.map((id) => (
-                  <button key={id} className="chip" onClick={() => setFocus(id)}>
-                    {narrators.get(id)?.ar ?? id}
-                  </button>
-                ))}
-              </div>
-            </div>
+
+          {bio?.variants?.length && bio.variants.length > 1 ? (
+            <section className="detail__section">
+              <h3>Named in the chains as</h3>
+              <p className="variants">{bio.variants.join(' · ')}</p>
+            </section>
           ) : null}
-        </section>
-      ) : null}
 
-      {bio?.books && Object.keys(bio.books).length ? (
-        <section className="detail__section">
-          <h3>Appears in</h3>
-          <ul className="appearances">
-            {Object.entries(bio.books)
-              .sort((a, b) => b[1] - a[1])
-              .map(([slug, count]) => (
-                <li key={slug}>
-                  <span>{books.get(slug)?.titleEn ?? slug}</span>
-                  <span className="appearances__count">{count.toLocaleString()}</span>
-                </li>
-              ))}
-          </ul>
-        </section>
-      ) : null}
+          {bio?.teachers?.length || bio?.students?.length ? (
+            <section className="detail__section">
+              <h3>Transmission circle</h3>
+              {bio.teachers?.length ? (
+                <div className="circle">
+                  <span className="circle__label">Heard from</span>
+                  <div className="chips">
+                    {bio.teachers.map((id) => (
+                      <button key={id} className="chip" onClick={() => setFocus(id)}>
+                        {narrators.get(id)?.ar ?? id}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+              {bio.students?.length ? (
+                <div className="circle">
+                  <span className="circle__label">Transmitted to</span>
+                  <div className="chips">
+                    {bio.students.map((id) => (
+                      <button key={id} className="chip" onClick={() => setFocus(id)}>
+                        {narrators.get(id)?.ar ?? id}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+            </section>
+          ) : null}
 
-      {bio?.hadiths?.length ? (
-        <section className="detail__section">
-          <div className="detail__sectionhead">
-            <h3>Chains passing through</h3>
-            <button className="link" onClick={() => setPins(bio.hadiths.slice(0, 60))}>
-              show only these
-            </button>
-          </div>
-          <HadithRefs key={focus} ids={bio.hadiths} />
-        </section>
-      ) : null}
+          {bio?.books && Object.keys(bio.books).length ? (
+            <section className="detail__section">
+              <h3>Appears in</h3>
+              <ul className="appearances">
+                {Object.entries(bio.books)
+                  .sort((a, b) => b[1] - a[1])
+                  .map(([slug, count]) => (
+                    <li key={slug}>
+                      <span>{books.get(slug)?.titleEn ?? slug}</span>
+                      <span className="appearances__count">{count.toLocaleString()}</span>
+                    </li>
+                  ))}
+              </ul>
+            </section>
+          ) : null}
+
+          {bio?.hadiths?.length ? (
+            <section className="detail__section">
+              <div className="detail__sectionhead">
+                <h3>Chains passing through</h3>
+                <button className="link" onClick={() => setPins(bio.hadiths.slice(0, 60))}>
+                  show only these
+                </button>
+              </div>
+              <HadithRefs key={focus} ids={bio.hadiths} />
+            </section>
+          ) : null}
+        </>
+      )}
     </aside>
   );
 }
