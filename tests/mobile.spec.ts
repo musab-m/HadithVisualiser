@@ -114,6 +114,48 @@ test.describe('on a phone', () => {
     expect(menu.y + menu.height).toBeLessThanOrEqual(view.height + 1);
   });
 
+  test('whichever sheet was opened last is the one on top', async ({ page }) => {
+    await openWith(page, { query: 'mercy' });
+    await page.locator('.topbar__toggle').click();
+
+    /** Is `selector` the element a tap at the centre of the screen would reach? */
+    const onTop = (selector: string) =>
+      page.evaluate((sel) => {
+        const sheet = document.querySelector(sel);
+        if (!sheet) return false;
+        const box = sheet.getBoundingClientRect();
+        const at = document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2);
+        return !!at && (sheet.contains(at) || at === sheet);
+      }, selector);
+
+    // Reader first, from the search results.
+    await page.locator('.hadith-ref').first().click();
+    await expect(page.locator('.reader')).toBeVisible();
+    expect(await onTop('.reader'), 'the reader opened behind something').toBe(true);
+
+    // A name in the chain opens the biography: the newer of the two.
+    await page.locator('.chain__node').first().click();
+    await expect(page.locator('.detail')).toBeVisible();
+    expect(await onTop('.detail'), 'the biography opened behind the reader').toBe(true);
+
+    // And back the other way — a reference in the biography opens the reader,
+    // which is now the newer one. This is the direction that was broken: the
+    // hadith opened underneath the biography and nothing looked to have
+    // happened until the biography was closed.
+    const refs = page.locator('.detail .hadith-ref');
+    if (await refs.count()) {
+      await refs.first().click();
+      await expect(page.locator('.reader')).toBeVisible();
+      expect(await onTop('.reader'), 'the hadith opened behind the biography').toBe(true);
+
+      // Closing it gives the biography back rather than leaving nothing.
+      await page.locator('.reader__close').click();
+      await expect(page.locator('.reader')).toHaveCount(0);
+      await expect(page.locator('.detail')).toBeVisible();
+      expect(await onTop('.detail')).toBe(true);
+    }
+  });
+
   test('the isolation bar stays clear of the top bar and inside the screen', async ({ page }) => {
     await openWith(page);
     const id = await page.evaluate(async () => {

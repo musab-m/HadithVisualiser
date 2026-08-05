@@ -1644,17 +1644,22 @@ input:focus-visible,
   }
 
   /*
-    Both sheets come up from the same edge, and a narrator is most often opened
-    from a name inside the hadith you are reading. The biography is therefore
-    the newer of the two and has to sit on top; underneath, its close button is
-    covered by the reader's and the panel reads as not having opened at all.
-    Closing it gives the reader back.
+    Both sheets come up from the same edge and each opens the other: a name in
+    a chain opens the biography, a reference under "chains passing through"
+    opens the reader. So neither can simply be the upper one — the sheet that
+    was asked for last is the one that has to be seen, and underneath, its
+    close button is covered by the other's and nothing appears to have
+    happened. Closing the top one gives the other back.
   */
   .detail {
     padding-left: 1.1rem;
     padding-right: 1.1rem;
     animation: rise 0.26s cubic-bezier(0.2, 0.8, 0.3, 1);
     z-index: 55;
+  }
+
+  .app--top-reader .reader {
+    z-index: 56;
   }
 
   .reader {
