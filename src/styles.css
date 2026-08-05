@@ -1177,6 +1177,12 @@ input:focus-visible,
   box-shadow: 0 0 8px currentColor;
 }
 
+/* Reads as a note on the key above rather than another entry in it. */
+.legend__rule {
+  font-style: italic;
+  color: var(--ink-faint);
+}
+
 .legend__keys--links {
   margin-bottom: 0.55rem;
   gap: 0.25rem 1rem;

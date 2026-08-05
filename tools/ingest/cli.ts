@@ -53,7 +53,7 @@ const SOURCES: CorpusManifest['sources'] = [
     id: 'itqan',
     title: 'Itqan — rijal database',
     url: 'https://github.com/R3GENESI5/Itqan',
-    note: '115,735 narrator profiles consolidated from 22 classical works of ʿilm ar-rijāl, plus per-hadith gradings and the kinship/kunya lookup tables.',
+    note: "115,735 narrator profiles consolidated from 22 classical works of ʿilm ar-rijāl, al-Albānī's rulings on the four Sunan, and the kinship/kunya lookup tables.",
   },
 ];
 
