@@ -1051,6 +1051,14 @@ input:focus-visible,
   font-size: 0.63rem;
 }
 
+.reader__grade-by {
+  font-style: normal;
+  margin-left: 0.35rem;
+  padding-left: 0.35rem;
+  border-left: 1px solid var(--edge);
+  color: var(--ink-faint);
+}
+
 .reader__grade--warn {
   color: #e0a458;
   border-color: rgba(224, 164, 88, 0.3);

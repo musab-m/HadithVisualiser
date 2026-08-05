@@ -94,6 +94,16 @@ export interface BookSummary {
   authorAr: string;
   /** Compiler's death year, hijri. */
   authorDiedAH?: number;
+  /**
+   * Whose ruling the per-hadith grades in this collection are.
+   *
+   * Travels with the book rather than with each hadith: one critic graded the
+   * whole collection, so repeating the attribution fifty-two hundred times
+   * would only make the file bigger. Absent where the collection carries no
+   * gradings — and a grade must never be shown without it, since an
+   * unattributed "ḍaʿīf" invites the reader to take it as settled fact.
+   */
+  gradedBy?: { work: string; author: string };
   /** Hadiths ingested from this book. */
   hadithCount: number;
   /** Of those, how many yielded a usable isnad chain. */

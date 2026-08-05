@@ -155,6 +155,25 @@ test.describe('the controls', () => {
     await expect(page.getByRole('dialog', { name: 'Hadith' })).toHaveCount(0);
   });
 
+  test('a grade never appears without whose ruling it is', async ({ page }) => {
+    // Abu Dawud 3 is graded, and its own wording is distinctive enough to be
+    // the only hit — the results list is ordered by collection, so a common
+    // word would bury it pages down.
+    await openWith(page, { books: ['abudawud'], query: 'أبو التياح حدثني شيخ' });
+    await openSidebar(page);
+
+    const ref = page.locator('.hadith-ref').filter({ hasText: 'abudawud' }).first();
+    await ref.click();
+    await expect(page.locator('.reader')).toBeVisible();
+
+    const grade = page.locator('.reader__grade').first();
+    await expect(grade).toBeVisible();
+    // The ruling, and the critic who passed it. Shown bare, a grade reads as a
+    // property of the hadith rather than one man's judgement of it.
+    await expect(grade.locator('.reader__grade-by')).toHaveText('al-Albānī');
+    expect(await grade.getAttribute('title')).toContain('al-Albānī');
+  });
+
   test('the biography panel moves between narrators', async ({ page }) => {
     await openWith(page, { query: 'mercy' });
     await openSidebar(page);
