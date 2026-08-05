@@ -142,6 +142,11 @@ The rule that enforces this is kept in the repository as
 reviewed rather than living only in the settings UI. To apply it: *Settings →
 Rules → Rulesets → New ruleset → Import a ruleset*.
 
+Merging is restricted as well as opening: `main` cannot be updated by anyone
+outside the bypass list, so an approved pull request is still merged by a
+repository admin rather than by whoever wrote it. Anything automated that needs
+to write to `main` would have to be added to that list.
+
 Regenerating `public/data` produces a very large diff by design: the corpus is
 committed so that the site needs no build-time access to the sources. Say in the
 pull request which books were re-ingested and what the counts came out as.
