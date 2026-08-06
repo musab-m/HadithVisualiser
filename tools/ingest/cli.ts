@@ -33,6 +33,7 @@ import { normaliseKey, stripDiacritics } from './isnad/arabic.js';
 import { loadKunyaMap, loadRelativeMaps } from './isnad/maps.js';
 import { parseIsnad } from './isnad/parse.js';
 import { RijalDatabase } from './rijal/db.js';
+import { readEntries } from './rijal/entries.js';
 import { rebuildRegistry } from './registry.js';
 import { rebuildSearchIndex } from './search.js';
 
@@ -412,8 +413,22 @@ async function main(): Promise<void> {
     }
   }
 
+  console.log('\n  Reading the classical works …');
+  // Only the profiles the corpus actually uses: a narrator who appears in no
+  // chain is never opened, so his entry is never wanted.
+  const used = new Set<number>();
+  for (const summary of manifest.books) {
+    const path = join(DATA_DIR, summary.dir, 'index.json');
+    if (!existsSync(path)) continue;
+    const file = JSON.parse(readFileSync(path, 'utf8')) as BookFile;
+    for (const hadith of file.hadiths) {
+      for (const id of hadith.chain) if (id.startsWith('r')) used.add(Number(id.slice(1)));
+    }
+  }
+  const works = readEntries(CACHE_DIR, db, used);
+
   console.log('\n  Rebuilding narrator registry …');
-  const { narratorCount, bioShards } = rebuildRegistry(DATA_DIR, manifest.books, db, kunya, normaliseKey);
+  const { narratorCount, bioShards } = rebuildRegistry(DATA_DIR, manifest.books, db, kunya, normaliseKey, works);
 
   console.log('  Rebuilding search index …');
   const search = rebuildSearchIndex(DATA_DIR, manifest.books);

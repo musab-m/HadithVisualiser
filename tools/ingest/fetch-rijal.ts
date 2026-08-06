@@ -9,6 +9,7 @@ import { existsSync, mkdirSync, statSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { ITQAN_BASE } from './books.js';
+import { WORK_SOURCES, fileOf, urlOf } from './rijal/works.js';
 
 const ROOT = fileURLToPath(new URL('../..', import.meta.url));
 const CACHE_DIR = join(ROOT, '.cache');
@@ -61,6 +62,13 @@ async function main(): Promise<void> {
   console.log('\n  Narrator profiles (ʿilm ar-rijāl)');
   for (const file of PROFILES) {
     await download(`${ITQAN_BASE}/app/data/rijal/${file}`, join(rijalDir, file));
+  }
+
+  console.log('\n  Classical works, read in full (OpenITI)');
+  const worksDir = join(CACHE_DIR, 'works');
+  mkdirSync(worksDir, { recursive: true });
+  for (const source of WORK_SOURCES) {
+    await download(urlOf(source), join(worksDir, fileOf(source)));
   }
 
   console.log('\n  Kinship and kunya lookup tables');

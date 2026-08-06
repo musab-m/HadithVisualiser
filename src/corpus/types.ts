@@ -301,6 +301,20 @@ export interface RijalVerdict {
   author?: string;
   gradeEn?: NarratorGrade;
   gradeAr?: string;
+  /**
+   * The entry itself, as the work has it, where this narrator could be matched
+   * to one with confidence.
+   *
+   * A verdict phrase is one word of a judgement; this is the sentence it was
+   * lifted out of. Only ever shown with `edition` beside it, because an entry
+   * quoted without saying which printing it came from invites being taken for
+   * the work rather than for one reading of it.
+   */
+  entryAr?: string;
+  /** The number the edition prints against the entry. */
+  entryNo?: number;
+  /** The edition the text was read from. */
+  edition?: string;
 }
 
 export interface NarratorBioShard {

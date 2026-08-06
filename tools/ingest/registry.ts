@@ -25,6 +25,7 @@ import {
 } from '../../src/corpus/types.js';
 import { findBook } from './books.js';
 import { namedAsWoman } from './rijal/gender.js';
+import type { WorkEntries } from './rijal/entries.js';
 import { assignGenerations, type GenerationResult } from './generations.js';
 import type { KunyaEntry } from './isnad/maps.js';
 import type { RijalDatabase } from './rijal/db.js';
@@ -60,6 +61,7 @@ export function rebuildRegistry(
   db: RijalDatabase,
   kunya: Map<string, KunyaEntry>,
   normaliseKey: (s: string) => string,
+  works: WorkEntries[] = [],
 ): RegistryResult {
   const acc = new Map<string, Accumulator>();
 
@@ -148,7 +150,7 @@ export function rebuildRegistry(
   }));
 
   for (const entry of acc.values()) {
-    const { indexEntry, bio } = describe(entry, db, kunya, normaliseKey, generations);
+    const { indexEntry, bio } = describe(entry, db, kunya, normaliseKey, generations, works);
     index.push(indexEntry);
     bios[bioShardFor(entry.id, shards)].bios[entry.id] = bio;
   }
@@ -204,6 +206,7 @@ function describe(
   kunya: Map<string, KunyaEntry>,
   normaliseKey: (s: string) => string,
   generations: GenerationResult,
+  works: WorkEntries[],
 ): { indexEntry: NarratorIndexEntry; bio: NarratorBio } {
   const gen = generations.gen.get(entry.id) ?? median(entry.depths);
   const gf = generations.source.get(entry.id) ?? 'position';
@@ -302,7 +305,21 @@ function describe(
               : uncertain
                 ? 'The chains name this transmitter briefly, and more than one figure in the rijal literature fits. This is the best reading of the name, not a settled identification.'
                 : undefined),
-          verdicts: profile.verdicts,
+          // What each work actually says about him, where he could be matched
+          // to an entry in it with confidence. The verdict phrase stays as it
+          // was; the entry is the sentence it was taken from.
+          verdicts: profile.verdicts.map((verdict) => {
+            const work = works.find((w) => w.key === verdict.key);
+            const found = work?.aligned.get(profile.id);
+            return found
+              ? {
+                  ...verdict,
+                  entryAr: found.text,
+                  entryNo: found.n,
+                  edition: work!.edition,
+                }
+              : verdict;
+          }),
           variants: [...entry.surfaces.keys()],
           teachers: profile.teachers.map((id) => `r${id}`),
           students: profile.students.map((id) => `r${id}`),
