@@ -218,10 +218,13 @@ function withEntries(
 ): NarratorBio['verdicts'] {
   const out = verdicts.map((verdict) => {
     const work = works.find((w) => w.key === verdict.key);
-    const found = work?.aligned.get(profileId);
+    // `read` goes on whether or not he was found, so a card that cannot open
+    // can say which of the two reasons it is.
+    if (!work) return verdict;
+    const found = work.aligned.get(profileId);
     return found
-      ? { ...verdict, entryAr: found.text, entryNo: found.n, edition: work!.edition }
-      : verdict;
+      ? { ...verdict, entryAr: found.text, entryNo: found.n, edition: work.edition, read: true }
+      : { ...verdict, read: true };
   });
 
   for (const work of works) {
@@ -236,6 +239,7 @@ function withEntries(
       entryAr: found.text,
       entryNo: found.n,
       edition: work.edition,
+      read: true,
     });
   }
   return out;

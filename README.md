@@ -418,8 +418,10 @@ to them.
 | [Itqan](https://github.com/R3GENESI5/Itqan) by Ali Bin Shahid | 115,735 narrator profiles consolidated from 22 classical works of ʿilm ar-rijāl; al-Albānī's per-hadith rulings on the four Sunan; the kinship and kunya lookup tables | Code MIT; data compiled from public-domain classical sources |
 
 Where a narrator could be matched to his entry in **Taqrīb al-Tahdhīb** with
-confidence — 5,192 of them — the assessment opens onto what Ibn Ḥajar actually
-wrote, in Arabic, with the edition named beneath it. The text is read from
+confidence — 5,446 of them — the assessment opens onto what Ibn Ḥajar actually
+wrote, in Arabic, with the edition named beneath it. A card that cannot open
+says which of the two reasons it is: the work has not been read in full yet, or
+it was read and he could not be identified in it. The text is read from
 [OpenITI](https://github.com/OpenITI), the entries are matched by name rather
 than through Itqan's own `entry_id` (which is approximate: a fifth of its Taqrīb
 citations land on a different man), and a match that cannot be made uniquely is

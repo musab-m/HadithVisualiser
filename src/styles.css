@@ -975,6 +975,18 @@ input:focus-visible,
   margin-top: 0.1rem;
 }
 
+/*
+  Why this one does not open. Quieter than the invitation to read, because it
+  is an explanation rather than an offer — but present, so an inert card reads
+  as a known gap and not as a broken control.
+*/
+.verdict__absent {
+  font-size: 0.55rem;
+  letter-spacing: 0.05em;
+  color: var(--ink-faint);
+  margin-top: 0.1rem;
+}
+
 .verdict__entry {
   padding: 0 0.65rem 0.7rem;
   width: 100%;

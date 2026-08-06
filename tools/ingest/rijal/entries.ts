@@ -43,6 +43,7 @@ export function readEntries(
       namings: [profile.fullNameAr, ...profile.namings].filter(Boolean),
       tabaqatAr: profile.tabaqatAr,
       diedRaw: profile.diedRaw,
+      marks: [profile.nasab, profile.laqab, profile.kunya, profile.city],
     });
   }
 

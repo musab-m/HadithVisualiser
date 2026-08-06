@@ -99,23 +99,55 @@ The rule that survived contact with the data:
 | --- | --- |
 | **Longest name wins** | `محمد بن مسلم بن عبيد الله بن عبد الله بن شهاب` is al-Zuhrī and `محمد بن مسلم بن تدرس` is Abū al-Zubayr, and the first three words are the same three words. |
 | **Ṭabaqa and death veto, they do not vouch** | Silence is not evidence: Taqrīb gives Anas ibn Mālik no ṭabaqa at all, while a different Anas is called `صحابي` outright — so rewarding agreement handed the Prophet's servant to the wrong Companion. A *stated* ṭabaqa that contradicts the record is another matter. |
-| **Ambiguity is refused** | Two entries answering a name equally well are two men, and neither is shown. |
+| **Ambiguity is refused, unless the rest of the identity parts them** | Two entries answering a name equally well are two men. Where the nasab, laqab or town settles which is which, it decides — but only on a mark that is *exclusive* to one of them and *rare* in the work. |
 | **An uncorroborated match needs five words of name** | Three words belong to several people and one of them is the wrong one. |
 
-Two readings had to be got right before any of this worked. Arabic attaches the
-conjunction — `ثلاث وسبعين` — so a year read word by word ends at its units
-digit, and `3` against a death in `73` looks like two different men. And Taqrīb
-routinely omits the century — al-Zuhrī `مات سنة خمس وعشرين`, meaning 125 — so a
-reading under a hundred is a year whose century was not written.
+Four readings had to be got right before any of this worked, because a year
+misread does not merely fail to corroborate — it *vetoes*, and throws out the
+right entry.
+
+- Arabic attaches the conjunction — `ثلاث وسبعين` — so a year read word by word
+  ends at its units digit, and `3` against a death in `73` looks like two men.
+- Taqrīb routinely omits the century — al-Zuhrī `مات سنة خمس وعشرين`, meaning
+  125 — so a reading under a hundred is a year whose century was not written.
+- The teens are a unit *plus* ten: `سبع عشرة` is 17, not 7 and then 10. Taking
+  the later word alone read it as 10, and `مات سنة سبع عشرة` then contradicted a
+  death on file in 117.
+- The age at death follows the year — `مات سنة سبع عشرة وله ثمانون سنة` — and
+  reading on adds it in: 7 + 10 + 80. That is how ʿUmar ibn al-Ḥakam ibn Thawbān
+  lost his own entry, #4882, to the man printed after him.
 
 ### Where it stands
 
 | | |
 | ---: | --- |
-| **5,192 of 7,410** | narrators in the corpus matched to an entry (70.1%) |
-| **77.7%** | of narrator *appearances* covered — the busy ones match best |
-| **94.8%** | of matches corroborated by the ṭabaqa or the death year the entry itself states |
-| **96.1%** | agree with the entry Itqan cites, where Itqan cites one |
+| **5,446 of 7,410** | narrators in the corpus matched to an entry (73.5%) |
+| **83.5%** | of narrator *appearances* covered — the busy ones match best |
+| **95.1%** | of matches corroborated by the ṭabaqa or the death year the entry itself states |
+| **96.9%** | agree with the entry Itqan cites, where Itqan cites one |
+
+Each rule was measured on its own before it was kept:
+
+| | matched | appearances | agreement |
+| --- | ---: | ---: | ---: |
+| name, ṭabaqa and death alone | 5,192 | 77.1% | 97.0% |
+| + the two year-reading fixes | 5,295 | 81.5% | 97.0% |
+| + tie-breaking on the identity | **5,446** | **83.5%** | 96.9% |
+
+The tie-breaker was tried twice and rejected once. Counting any exclusive mark
+added 261 matches and several plainly wrong ones: `عبد الملك بن عمير`, 191
+chains, took the entry of a *majhūl*, and `حبيب بن أبي ثابت` — `ثقة` — took
+`حبيب بن النعمان الأسدي`, `مقبول`, on the strength of `الأسدي` alone. Weighing a
+mark by how much of the book it fails to describe is what fixed it: `الأسدي`
+stands in hundreds of lives and decides nothing, `النصري` in nineteen and
+decides. Ranks are excluded outright — `الحافظ` is rare enough in Taqrīb to look
+decisive while saying only what a man did.
+
+The cost of that caution is real and worth naming: `حفص بن غياث`, 208 chains,
+is no longer matched, because Taqrīb writes his name with a spelling gloss
+inside it — `حفص بن غياث بمعجمة مكسورة وياء ومثلثة بن طلق` — and only `القاضي`
+remained to part him from the other Ḥafṣes. A missing entry is the cheaper
+failure.
 
 Spot-checked against the most-used narrators in the corpus, every one is right:
 Abū Hurayra to `#8426 أبو هريرة الدوسي الصحابي الجليل`, al-Zuhrī to `#6296`,
@@ -134,8 +166,8 @@ work it came from. It lands on the bio shard, which is already fetched only when
 a narrator is opened, so the corpus a reader downloads to look at the graph is
 unchanged; the shards grew from 13 MB to 15 MB for the readers who do open one.
 
-**5,192 narrators carry an entry.** For 3,156 it enriches a card that was already
-there; for **2,036 the entry is the whole card** — Ibn Ḥajar has a life of him
+**5,446 narrators carry an entry.** For 3,265 it enriches a card that was already
+there; for **2,181 the entry is the whole card** — Ibn Ḥajar has a life of him
 and Itqan extracted no verdict from it. Binding the text to the verdicts alone
 would have thrown those away for want of a row to sit in.
 
@@ -143,6 +175,12 @@ The card opens on a click and the entry is set in Arabic at reading size, with
 its number in the edition and the edition itself beneath it. It is not
 translated: rendering `صدوق يهم` into English means choosing what it comes out
 as, and that choice is the whole content of the judgement.
+
+A card that *cannot* open says why, because an inert card is otherwise
+indistinguishable from a broken one. There are two reasons and they are
+different facts: **not yet read in full** — the work is one of the 21 still to
+come — and **not identified in this work**, which is Taqrīb read through
+without him being pinned to one entry. 277 cards carry the second.
 
 ## Still to do
 

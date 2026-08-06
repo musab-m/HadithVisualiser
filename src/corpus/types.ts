@@ -315,6 +315,14 @@ export interface RijalVerdict {
   entryNo?: number;
   /** The edition the text was read from. */
   edition?: string;
+  /**
+   * This work's text was read at ingest.
+   *
+   * Set whether or not he was found in it, so the panel can tell the two
+   * silences apart: a work nobody has read yet, and a work read through in
+   * which this man could not be identified.
+   */
+  read?: boolean;
 }
 
 export interface NarratorBioShard {
