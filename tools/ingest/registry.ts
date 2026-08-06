@@ -54,6 +54,8 @@ interface Accumulator {
 export interface RegistryResult {
   narratorCount: number;
   bioShards: number;
+  /** The band holding everyone the chains stop short of — see generations.ts. */
+  lateBand: number;
 }
 
 export function rebuildRegistry(
@@ -134,13 +136,26 @@ export function rebuildRegistry(
     if (profile.tabaqa != null) tabaqa.set(id, profile.tabaqa);
     if (profile.diedAH != null) died.set(id, profile.diedAH);
   }
+  // A compiler's death year matters more than anyone's, and was the one the
+  // generations never saw. His node sits at the end of every chain in his book,
+  // so its depth is a fact about how the collection cites rather than about
+  // when he lived — and the shorter the citation, the earlier he lands.
+  for (const summary of books) {
+    if (summary.authorDiedAH) died.set(collectorId(summary.slug), summary.authorDiedAH);
+  }
   const generations = assignGenerations({ chains, tabaqa, died });
   generations.gen.set(PROPHET_ID, 0);
   generations.source.set(PROPHET_ID, 'chains');
   console.log(
     `  generations: ${generations.counts.chains} from chains, ${generations.counts.tabaqa} from ṭabaqa, ` +
-      `${generations.counts.inferred} inferred, ${generations.counts.position} by position`,
+      `${generations.counts.inferred} inferred, ${generations.counts.position} by position, ` +
+      `${generations.counts.dates} corrected by death year`,
   );
+  const closes = [...generations.landmarks]
+    .sort((a, b) => a[0] - b[0])
+    .map(([g, year]) => `${g}:${year}`)
+    .join(' ');
+  console.log(`  generations close (AH) ${closes}; band ${generations.lateBand} is past the chains`);
 
   const shards = shardCount(acc.size);
   const index: NarratorIndexEntry[] = [];
@@ -179,7 +194,7 @@ export function rebuildRegistry(
     writeJson(join(dataDir, 'narrators', `bio-${shard.shard}.json`), shard);
   }
 
-  return { narratorCount: index.length, bioShards: shards };
+  return { narratorCount: index.length, bioShards: shards, lateBand: generations.lateBand };
 }
 
 /** The most frequent surface form, as the label to show on the node. */

@@ -37,6 +37,7 @@ export function NarratorPanel() {
   const books = useStore((s) => s.books);
   const setFocus = useStore((s) => s.setFocus);
   const setPins = useStore((s) => s.setPins);
+  const lateBand = useStore((s) => s.manifest?.lateBand);
 
   if (!focus) return null;
   const entry = narrators.get(focus);
@@ -109,9 +110,17 @@ export function NarratorPanel() {
               }
               value={bio?.gradeAr}
             />
+            {/*
+              The last band is not a generation and is not numbered as one. A
+              compiler who took his reports out of earlier books has no measured
+              depth of transmission at all, and printing "generation 8" for him
+              would be inventing the number the chains failed to supply.
+             */}
             <Row
               label="Generation"
-              value={`${entry.gen} — ${GENERATION_SOURCE_LABEL[entry.gf] ?? 'from the chains'}`}
+              value={`${entry.gen === lateBand ? 'later than the chains reach' : entry.gen} — ${
+                GENERATION_SOURCE_LABEL[entry.gf] ?? 'from the chains'
+              }`}
             />
             <Row
               label="In this corpus"

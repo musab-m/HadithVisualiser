@@ -4,7 +4,7 @@
  * Deriving this per view was unstable — the same man came out a generation
  * apart depending on which books were showing — and deriving it from chain
  * position alone throws away what the biographical literature already settled.
- * So it is computed here, at ingest, from three sources in order of how much
+ * So it is computed here, at ingest, from four sources in order of how much
  * they can be trusted for a given narrator:
  *
  *   1. His own chains, where there are enough of them to be sure. The shortest
@@ -18,19 +18,22 @@
  *      generation belongs before them, and someone who receives from one
  *      belongs after; a narrator with neither chains nor a ṭabaqa can still be
  *      placed from the people either side of him.
+ *   4. When he died, which overrules all three where it flatly contradicts
+ *      them. The first three read chain depth as elapsed time, and it stops
+ *      being that the moment a compiler quotes a book instead of a teacher.
  *
- * Every narrator records which of the three placed him, so the panel can say
+ * Every narrator records which of the four placed him, so the panel can say
  * so rather than presenting a guess and a fact in the same voice.
  */
 
-export type GenerationSource = 'chains' | 'tabaqa' | 'inferred' | 'position';
+export type GenerationSource = 'chains' | 'tabaqa' | 'inferred' | 'position' | 'dates';
 
 export interface GenerationInput {
   /** Narrator ids in transmission order, Prophet first, compiler last. */
   chains: { path: string[]; toProphet: boolean }[];
   /** Ibn Ḥajar's ṭabaqa, 1–12, for the narrators that have one. */
   tabaqa: Map<string, number>;
-  /** Death year in hijri, for ordering within a generation. */
+  /** Death year in hijri, where it is known. */
   died: Map<string, number>;
 }
 
@@ -41,6 +44,14 @@ export interface GenerationResult {
   sub: Map<string, number>;
   /** The ṭabaqa → generation mapping this corpus produced. */
   calibration: Map<number, number>;
+  /** The year each generation's chain-placed narrators die out by. */
+  landmarks: Map<number, number>;
+  /**
+   * The band past every generation the chains produced, holding the people the
+   * chains stop short of. Not an (n+1)th generation of transmission — see
+   * below.
+   */
+  lateBand: number;
   counts: Record<GenerationSource, number>;
 }
 
@@ -57,6 +68,20 @@ const MIN_ANCHORED = 3;
  * Companion left out, are common enough to make al-Zuhrī a Companion.
  */
 const SHORT_END = 0.1;
+
+/**
+ * Chain-placed narrators a generation needs to carry a death year before its
+ * dates are allowed to speak for it. A landmark drawn from four men is a fact
+ * about those four.
+ */
+const MIN_DATED = 20;
+
+/**
+ * Which end of a generation's death years marks where it closes. Not the last
+ * of them: every band has its centenarian, and letting him set the edge would
+ * stretch each generation over the one after it.
+ */
+const LATE_END = 0.9;
 
 function percentile(values: number[], q: number): number {
   const sorted = [...values].sort((a, b) => a - b);
@@ -192,6 +217,80 @@ export function assignGenerations(input: GenerationInput): GenerationResult {
     source.set(id, 'position');
   }
 
+  // --- let the death dates correct what the chains cannot -------------------
+  // Everything above reads chain depth as elapsed time, which it is only while
+  // each link is a man who heard the report from the man before him. A compiler
+  // working from earlier books breaks that: he cites the Companion and stops,
+  // and the chain reads two deep for someone six centuries later. al-Nawawī
+  // (d. 676) comes out of Riyāḍ al-Ṣāliḥīn standing among the Successors, and
+  // Ibn Ḥajar (d. 852) out of Bulūgh al-Marām beside him.
+  //
+  // The ṭabaqāt cannot correct it. The twelve of the Taqrīb run out around
+  // 250 AH, and everyone they fail to reach is exactly everyone this affects.
+  //
+  // Death years can, and they are already here. So each generation is given a
+  // calendar landmark, learned the way the ṭabaqa mapping was — from the death
+  // years of the narrators its own chains placed — and a man who outlived his
+  // generation's by a full generation's span is moved down to the earliest one
+  // that can hold him. Only ever down: a death year is evidence someone lived
+  // on, never that he came earlier than his chains say.
+  const deaths = new Map<number, number[]>();
+  for (const [id, value] of gen) {
+    if (source.get(id) !== 'chains') continue;
+    const year = died.get(id);
+    if (year == null) continue;
+    const list = deaths.get(value);
+    if (list) list.push(year);
+    else deaths.set(value, [year]);
+  }
+
+  const landmarks = new Map<number, number>();
+  let closes = 0;
+  for (const value of [...deaths.keys()].sort((a, b) => a - b)) {
+    const years = deaths.get(value)!;
+    if (years.length < MIN_DATED) continue;
+    // Monotone for the same reason the ṭabaqa mapping is: a later generation
+    // does not close before the one it followed.
+    closes = Math.max(closes, percentile(years, LATE_END));
+    landmarks.set(value, closes);
+  }
+  const bounded = [...landmarks].sort((a, b) => a[0] - b[0]);
+
+  // How long a generation runs, taken from the corpus rather than assumed: the
+  // usual gap between one closing and the next. It doubles as the tolerance,
+  // which is the point — a narrator has to be a whole generation out of place
+  // before his own chains are overruled, so the correction lands on the men the
+  // dates contradict rather than on everyone who merely died old.
+  const spans: number[] = [];
+  for (let i = 1; i < bounded.length; i++) spans.push(bounded[i][1] - bounded[i - 1][1]);
+  const span = spans.length ? median(spans) : 0;
+
+  // One band past every generation the chains produced, so nobody the chains
+  // did measure is standing in it. It is not a claim that transmission ran that
+  // many links deep — the axis is depth of transmission, and a compiler who
+  // took a report from a book has no measured depth at all. That is why his
+  // chain is short. The band is where those people go.
+  let deepest = 0;
+  for (const value of gen.values()) if (value > deepest) deepest = value;
+  const lateBand = deepest + 1;
+
+  if (span > 0) {
+    for (const [id, year] of died) {
+      const current = gen.get(id);
+      if (current == null) continue;
+      let floor = lateBand;
+      for (const [value, close] of bounded) {
+        if (year <= close + span) {
+          floor = value;
+          break;
+        }
+      }
+      if (floor <= current) continue;
+      gen.set(id, floor);
+      source.set(id, 'dates');
+    }
+  }
+
   // --- rank within each generation by age -----------------------------------
   const layers = new Map<number, string[]>();
   for (const [id, value] of gen) {
@@ -216,8 +315,9 @@ export function assignGenerations(input: GenerationInput): GenerationResult {
     tabaqa: 0,
     inferred: 0,
     position: 0,
+    dates: 0,
   };
   for (const value of source.values()) counts[value]++;
 
-  return { gen, source, sub, calibration, counts };
+  return { gen, source, sub, calibration, landmarks, lateBand, counts };
 }

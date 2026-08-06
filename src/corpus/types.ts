@@ -53,6 +53,13 @@ export interface CorpusManifest {
   narratorCount: number;
   /** Number of narrator bio shards (`narrators/bio-0.json` … `bio-N.json`). */
   bioShards: number;
+  /**
+   * The generation band past every one the chains produced. It holds the people
+   * the chains stop short of — compilers who quoted an earlier book rather than
+   * a teacher, and so have no measured depth of transmission at all — and is
+   * labelled as such rather than as one more generation.
+   */
+  lateBand?: number;
   /** Full-text index, absent until the index has been built. */
   search?: SearchSummary;
   books: BookSummary[];
@@ -249,13 +256,14 @@ export interface NarratorIndexEntry {
 }
 
 /** How a narrator's generation was arrived at. */
-export type GenerationSource = 'chains' | 'tabaqa' | 'inferred' | 'position';
+export type GenerationSource = 'chains' | 'tabaqa' | 'inferred' | 'position' | 'dates';
 
 export const GENERATION_SOURCE_LABEL: Record<GenerationSource, string> = {
   chains: 'from the chains he appears in',
   tabaqa: "from Ibn Ḥajar's ṭabaqa",
   inferred: 'from the generations of those he transmitted with',
   position: 'from his position in chains that do not reach the Prophet',
+  dates: 'from when he died, which his chains place too early',
 };
 
 export interface NarratorIndexFile {
