@@ -2,6 +2,7 @@ import { GENERATION_SOURCE_LABEL, GRADE_COLOR, GRADE_LABEL, PROPHET_ID } from '.
 import { useStore } from '../state/store';
 import { HadithRefs } from './HadithRefs';
 import { Sira } from './Sira';
+import { Verdict } from './Verdict';
 
 /**
  * The name, without the disagreement about it.
@@ -123,27 +124,7 @@ export function NarratorPanel() {
               <h3>Assessments in ʿilm ar-rijāl</h3>
               <ul className="verdicts">
                 {bio.verdicts.map((verdict) => (
-                  <li key={verdict.key}>
-                    <div className="verdict__work">
-                      {verdict.work}
-                      {verdict.author ? (
-                        <span className="verdict__author">{verdict.author}</span>
-                      ) : null}
-                    </div>
-                    <div className="verdict__grade">
-                      {verdict.gradeAr ? (
-                        <span className="verdict__ar">{verdict.gradeAr}</span>
-                      ) : null}
-                      {verdict.gradeEn ? (
-                        <span
-                          className="verdict__en"
-                          style={{ ['--grade' as string]: GRADE_COLOR[verdict.gradeEn] }}
-                        >
-                          {GRADE_LABEL[verdict.gradeEn]}
-                        </span>
-                      ) : null}
-                    </div>
-                  </li>
+                  <Verdict key={verdict.key} verdict={verdict} />
                 ))}
               </ul>
             </section>

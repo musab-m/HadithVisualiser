@@ -26,6 +26,7 @@ import {
 import { findBook } from './books.js';
 import { namedAsWoman } from './rijal/gender.js';
 import type { WorkEntries } from './rijal/entries.js';
+import { RIJAL_WORKS } from './rijal/sources.js';
 import { assignGenerations, type GenerationResult } from './generations.js';
 import type { KunyaEntry } from './isnad/maps.js';
 import type { RijalDatabase } from './rijal/db.js';
@@ -200,6 +201,46 @@ function median(values: number[]): number {
   return sorted[Math.floor(sorted.length / 2)];
 }
 
+/**
+ * Hang each work's entry on the verdict that came from the same work.
+ *
+ * Where a work has an entry for him but Itqan recorded no verdict from it, the
+ * entry stands as its own card. 5,192 narrators matched an entry in Taqrīb and
+ * only 3,156 of them carry a Taqrīb verdict, so binding the text to the
+ * verdicts alone would have thrown away two thousand entries for want of a row
+ * to sit in — and what Ibn Ḥajar wrote is worth reading whether or not a grade
+ * was extracted from it.
+ */
+function withEntries(
+  verdicts: NarratorBio['verdicts'],
+  profileId: number,
+  works: WorkEntries[],
+): NarratorBio['verdicts'] {
+  const out = verdicts.map((verdict) => {
+    const work = works.find((w) => w.key === verdict.key);
+    const found = work?.aligned.get(profileId);
+    return found
+      ? { ...verdict, entryAr: found.text, entryNo: found.n, edition: work!.edition }
+      : verdict;
+  });
+
+  for (const work of works) {
+    if (out.some((verdict) => verdict.key === work.key)) continue;
+    const found = work.aligned.get(profileId);
+    if (!found) continue;
+    const named = RIJAL_WORKS[work.key];
+    out.push({
+      key: work.key,
+      work: named?.work ?? work.key,
+      author: named?.author,
+      entryAr: found.text,
+      entryNo: found.n,
+      edition: work.edition,
+    });
+  }
+  return out;
+}
+
 function describe(
   entry: Accumulator,
   db: RijalDatabase,
@@ -305,21 +346,7 @@ function describe(
               : uncertain
                 ? 'The chains name this transmitter briefly, and more than one figure in the rijal literature fits. This is the best reading of the name, not a settled identification.'
                 : undefined),
-          // What each work actually says about him, where he could be matched
-          // to an entry in it with confidence. The verdict phrase stays as it
-          // was; the entry is the sentence it was taken from.
-          verdicts: profile.verdicts.map((verdict) => {
-            const work = works.find((w) => w.key === verdict.key);
-            const found = work?.aligned.get(profile.id);
-            return found
-              ? {
-                  ...verdict,
-                  entryAr: found.text,
-                  entryNo: found.n,
-                  edition: work!.edition,
-                }
-              : verdict;
-          }),
+          verdicts: withEntries(profile.verdicts, profile.id, works),
           variants: [...entry.surfaces.keys()],
           teachers: profile.teachers.map((id) => `r${id}`),
           students: profile.students.map((id) => `r${id}`),

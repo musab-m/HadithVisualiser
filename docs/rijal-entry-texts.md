@@ -1,6 +1,6 @@
 # Where the assessments come from, and why they are about to change
 
-**Status:** decided, being built.
+**Status:** built for Taqrīb al-Tahdhīb; the other 21 works follow one at a time.
 **Question:** the panel lists what the classical critics said about a narrator —
 *Taqrīb al-Tahdhīb · Ibn Ḥajar · ثقة حافظ*. Should those cards open the entry
 itself, in Arabic?
@@ -126,13 +126,28 @@ The gap — three narrators in ten — is mostly men named in the chains too bri
 to be pinned to one entry, which is the same reason a quarter of the first
 generation shows as unassessed. They will show what they show now.
 
+## What shipped
+
+The text is fetched at ingest into `.cache/works/` beside the other sources,
+aligned over only the profiles this corpus uses, and hung on the verdict for the
+work it came from. It lands on the bio shard, which is already fetched only when
+a narrator is opened, so the corpus a reader downloads to look at the graph is
+unchanged; the shards grew from 13 MB to 15 MB for the readers who do open one.
+
+**5,192 narrators carry an entry.** For 3,156 it enriches a card that was already
+there; for **2,036 the entry is the whole card** — Ibn Ḥajar has a life of him
+and Itqan extracted no verdict from it. Binding the text to the verdicts alone
+would have thrown those away for want of a row to sit in.
+
+The card opens on a click and the entry is set in Arabic at reading size, with
+its number in the edition and the edition itself beneath it. It is not
+translated: rendering `صدوق يهم` into English means choosing what it comes out
+as, and that choice is the whole content of the judgement.
+
 ## Still to do
 
-1. Fetch the text at ingest, into `.cache/` beside the other sources, and record
-   the edition with it.
-2. Store the entry on the narrator's bio shard, which is already lazy-loaded, so
-   the corpus that ships is not made heavier for readers who never open a card.
-3. Make the card open it, in Arabic, with the work, the author and the edition
-   named beneath.
-4. Then the other 21 works, one at a time, each measured the same way before it
-   ships.
+The other 21 works, one at a time, each measured the way this one was before it
+ships. Taqrīb is the easiest of them — short entries, one man each, and a number
+printed against every one. Tahdhīb al-Tahdhīb and Tahdhīb al-Kamāl run to
+paragraphs and pages, and al-Iṣāba and the Ṭabaqāt segment differently again, so
+each needs its own reading of the markup before any of it is worth aligning.

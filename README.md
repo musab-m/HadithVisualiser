@@ -417,6 +417,14 @@ to them.
 | [hadith-json](https://github.com/AhmedBaset/hadith-json) (pinned at `v1.2.0`) | Arabic text and English translation of the collections, scraped from [sunnah.com](https://sunnah.com) | Hadith texts, public domain collections |
 | [Itqan](https://github.com/R3GENESI5/Itqan) by Ali Bin Shahid | 115,735 narrator profiles consolidated from 22 classical works of ʿilm ar-rijāl; al-Albānī's per-hadith rulings on the four Sunan; the kinship and kunya lookup tables | Code MIT; data compiled from public-domain classical sources |
 
+Where a narrator could be matched to his entry in **Taqrīb al-Tahdhīb** with
+confidence — 5,192 of them — the assessment opens onto what Ibn Ḥajar actually
+wrote, in Arabic, with the edition named beneath it. The text is read from
+[OpenITI](https://github.com/OpenITI), the entries are matched by name rather
+than through Itqan's own `entry_id` (which is approximate: a fifth of its Taqrīb
+citations land on a different man), and a match that cannot be made uniquely is
+not made at all. `docs/rijal-entry-texts.md` sets out the rule and the numbers.
+
 The verdicts shown in the biography panel come from the classical literature via
 Itqan — Ibn Ḥajar's *Taqrīb al-Tahdhīb* and *Tahdhīb al-Tahdhīb*, al-Mizzī's
 *Tahdhīb al-Kamāl*, Ibn Abī Ḥātim's *al-Jarḥ wa-l-Taʿdīl*, Ibn Ḥibbān's
