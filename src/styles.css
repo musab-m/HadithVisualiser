@@ -927,14 +927,95 @@ input:focus-visible,
 }
 
 .verdicts li {
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.022);
+  border: 1px solid rgba(150, 172, 214, 0.07);
+}
+
+/* The head of the card, whether or not it is a button. */
+.verdict,
+.verdict__toggle {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
   gap: 0.8rem;
+}
+
+.verdict {
+  flex-direction: column;
+}
+
+.verdict:not(.verdict--open) {
+  flex-direction: row;
   padding: 0.55rem 0.65rem;
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.022);
-  border: 1px solid rgba(150, 172, 214, 0.07);
+}
+
+.verdict__toggle {
+  width: 100%;
+  padding: 0.55rem 0.65rem;
+  text-align: left;
+}
+
+.verdict--open {
+  border-color: rgba(150, 172, 214, 0.14);
+}
+
+.verdict--open:hover,
+.verdict--shown {
+  border-color: var(--gold-line);
+  background: var(--gold-soft);
+}
+
+/* Says there is more behind the phrase, at rest rather than on hover. */
+.verdict__more {
+  font-size: 0.58rem;
+  letter-spacing: 0.06em;
+  color: var(--gold);
+  border-bottom: 1px solid var(--gold-line);
+  margin-top: 0.1rem;
+}
+
+.verdict__entry {
+  padding: 0 0.65rem 0.7rem;
+  width: 100%;
+}
+
+/*
+  Ibn Ḥajar's own sentence. Set at reading size in the Arabic face — this is
+  the one place in the panel where the source speaks at length rather than in a
+  word, and it is set to be read rather than glanced at.
+*/
+.verdict__text {
+  font-family: var(--ar);
+  font-size: 1.05rem;
+  line-height: 2;
+  direction: rtl;
+  text-align: right;
+  color: var(--ink);
+  margin: 0 0 0.6rem;
+  padding-top: 0.6rem;
+  border-top: 1px solid rgba(150, 172, 214, 0.1);
+}
+
+.verdict__edition {
+  display: flex;
+  gap: 0.5rem;
+  align-items: baseline;
+  justify-content: flex-end;
+  direction: rtl;
+  font-family: var(--ar);
+  font-size: 0.85rem;
+  line-height: 1.7;
+  color: var(--ink-faint);
+  margin: 0;
+}
+
+.verdict__no {
+  font-family: var(--ui);
+  font-size: 0.62rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--gold);
+  direction: ltr;
 }
 
 .verdict__work {

@@ -13,13 +13,16 @@
  *
  * - a profile matches an entry only through one of its **recorded namings**,
  *   matched **in order from the first word of the entry**, because Taqrīb
- *   writes the name first and judges after it;
+ *   writes the name first and judges after it, and the fullest name wins;
  * - the match must be **unique** — where two entries answer a name equally
  *   well, both are dropped, since `الزهري` is one name and several men;
- * - and it must be **corroborated**, by the ṭabaqa the entry states or the year
- *   of death it gives. Both are printed in the entry itself and both are held
- *   independently on the profile, so they check the match rather than restating
- *   it.
+ * - the ṭabaqa and the death year the entry states **veto** a match, they do
+ *   not vouch for one. Silence is not evidence: Taqrīb gives Anas ibn Mālik no
+ *   ṭabaqa at all while a different Anas is called `صحابي` outright, so
+ *   rewarding agreement handed the Prophet's servant to the wrong Companion.
+ *   A *stated* ṭabaqa that contradicts the record is another matter — that is
+ *   two men;
+ * - and a match nothing corroborates needs five words of name behind it.
  *
  * What this buys is that a wrong entry is mostly a *missing* entry. Quoting one
  * man's life under another man's name is the one failure that would make this

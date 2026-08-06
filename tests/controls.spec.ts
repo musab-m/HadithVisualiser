@@ -370,6 +370,35 @@ test.describe('the controls', () => {
     await box.fill('');
   });
 
+  test('an assessment opens onto what the work actually says', async ({ app: page }) => {
+    await openSidebar(page);
+    // al-Zuhrī is in Taqrīb al-Tahdhīb under a nasab nobody else has, which is
+    // what made him matchable; 4,264 chains make him worth reading.
+    await page.getByLabel('Find a narrator by name').fill('الزهري');
+    await page.locator('.rawi').first().click();
+    await expect(page.locator('.detail')).toBeVisible();
+
+    // Only a card with an entry behind it offers to open. The others say what
+    // they have always said and are not buttons.
+    const openable = page.locator('.verdict--open');
+    await expect(openable.first()).toBeVisible();
+    await expect(page.locator('.verdict__text')).toHaveCount(0);
+
+    await openable.first().locator('.verdict__toggle').click();
+    const entry = page.locator('.verdict__text').first();
+    await expect(entry).toBeVisible();
+    // Ibn Ḥajar's sentence, not the one word the grade chip carries.
+    await expect(entry).toContainText('الزهري');
+    expect((await entry.innerText()).length).toBeGreaterThan(80);
+    // Never the text on its own: the edition it was read from goes with it.
+    await expect(page.locator('.verdict__edition').first()).toContainText('عوامة');
+
+    await openable.first().locator('.verdict__toggle').click();
+    await expect(page.locator('.verdict__text')).toHaveCount(0);
+    await page.locator('.detail__close').click();
+    await page.getByLabel('Find a narrator by name').fill('');
+  });
+
   test('the legend explains itself and folds away', async ({ app: page }) => {
     const about = page.getByRole('button', { name: 'about the data' });
     await about.click();
