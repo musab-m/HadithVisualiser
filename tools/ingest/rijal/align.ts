@@ -49,6 +49,11 @@ export interface Candidate {
   namings: string[];
   tabaqatAr?: string;
   diedRaw?: string;
+  /**
+   * The rest of the identity — nasab, laqab, kunya, town — used only to part
+   * two entries that answer the name equally well.
+   */
+  marks?: (string | undefined)[];
 }
 
 export interface Alignment {
@@ -75,6 +80,15 @@ const COMPANION_IN_ENTRY = /(?:^|\s)(?:صحاب[يى]ه?|له\s+صحبه?|مخض
 /** `مات سنة ست وأربعين` and the like; the year is written out in words. */
 const DEATH_IN_ENTRY = /مات\s+سنة\s+([^\d]{0,40})/;
 
+/**
+ * How old he was, which Taqrīb often gives straight after the year he died:
+ * `مات سنة سبع عشرة وله ثمانون سنة`. Read on, and the age is added to the year
+ * — 7 + 10 + 80 — and the entry then contradicts the record and is thrown out.
+ * That is how ʿUmar ibn al-Ḥakam ibn Thawbān lost his own entry to the man
+ * printed after him.
+ */
+const AGE_AFTER_DEATH = /\s(?:وله|وهو\s+ابن|عن)\s/;
+
 const UNITS: Record<string, number> = {
   احدي: 1, واحده: 1, اثنتين: 2, ثلاث: 3, اربع: 4, خمس: 5, ست: 6, سبع: 7,
   ثمان: 8, تسع: 9, عشر: 10, عشره: 10,
@@ -83,6 +97,9 @@ const TENS: Record<string, number> = {
   عشرين: 20, ثلاثين: 30, اربعين: 40, خمسين: 50, ستين: 60,
   سبعين: 70, ثمانين: 80, تسعين: 90,
 };
+/** The ten of the teens: `ثلاث عشرة`, `سبع عشرة`. */
+const TEEN = new Set(['عشر', 'عشره']);
+
 const HUNDREDS: Record<string, number> = {
   ماىه: 100, مايه: 100, مايتين: 200, ماىتين: 200, ثلاثماىه: 300, ثلاثمايه: 300,
 };
@@ -99,17 +116,32 @@ export function yearInWords(phrase: string): number | undefined {
   let tens = 0;
   let hundreds = 0;
   let seen = false;
+  let afterUnit = false;
   for (const raw of normaliseKey(phrase).split(' ').filter(Boolean)) {
     // Arabic attaches the conjunction to the word — `ثلاث وسبعين`, `ومائة` —
     // so the wāw has to come off before the number can be read. Reading it as
     // part of the word ended every year at its units digit, and a year of `3`
     // against a death in `73` looks like two different men.
-    const word = raw.length > 2 && raw.startsWith('و') ? raw.slice(1) : raw;
+    const attached = raw.length > 2 && raw.startsWith('و');
+    const word = attached ? raw.slice(1) : raw;
+
+    // `سبع عشرة` is seventeen, not seven and then ten: a unit standing directly
+    // before `عشرة`, with no wāw between them, is the teens construction and
+    // the two words are one number. Overwriting instead read it as ten, and
+    // `مات سنة سبع عشرة` then contradicted a death on file in 117.
+    if (TEEN.has(word) && afterUnit && !attached) {
+      units += 10;
+      afterUnit = false;
+      continue;
+    }
+    afterUnit = false;
+
     if (UNITS[word] !== undefined) {
       // `اثنتين وقيل ثلاث وتسعين` offers two readings; the later one wins, and
       // the caller compares against every year the database holds anyway.
       units = UNITS[word];
       seen = true;
+      afterUnit = true;
     } else if (TENS[word] !== undefined) {
       tens = TENS[word];
       seen = true;
@@ -140,6 +172,85 @@ export function yearsIn(raw: string | undefined): number[] {
   return [...(raw ?? '').matchAll(/\d{1,3}/g)].map((m) => Number(m[0])).filter((n) => n > 0);
 }
 
+/**
+ * Words that identify nobody. They stand in half the entries in the book, so
+ * finding one in a tied entry and not in its rival is coincidence rather than
+ * evidence, and a tie broken on coincidence is a wrong entry printed under a
+ * man's name.
+ */
+const MARK_NOISE = new Set([
+  'بن', 'ابن', 'ابو', 'ابي', 'ابا', 'ام', 'الله', 'عبد', 'مولاهم', 'مولي', 'مولاه',
+  'ويقال', 'وقيل', 'يقال', 'وهو', 'هو', 'اسمه', 'وكان', 'ثم', 'من', 'في',
+  // Ranks and offices. They say what a man did, not which man he was, and
+  // `الحافظ` — ten entries in the whole of Taqrīb — is rare enough to look
+  // decisive while deciding nothing: it handed Muʿallā ibn Asad the entry of
+  // ʿAlī ibn al-Muthannā.
+  'الحافظ', 'القاضي', 'الامام', 'الشيخ', 'الامير', 'الفقيه', 'المحدث', 'الزاهد',
+  'العابد', 'الكاتب', 'الخليفه', 'القارئ', 'المقرئ',
+]);
+
+/** Shorter than this and a word is a fragment, not a name. */
+const MARK_MIN = 3;
+
+/**
+ * How many entries a mark may appear in and still decide anything.
+ *
+ * `الأسدي` stands in hundreds of lives and `النصري` in a handful, and the two
+ * are not the same evidence. Weighing them alike gave Ḥabīb ibn Abī Thābit —
+ * `ثقة`, 160 chains — the entry of one Ḥabīb ibn al-Nuʿmān al-Asadī, `مقبول`,
+ * on the strength of `الأسدي` alone. A mark commoner than this is treated as
+ * saying nothing, because that is roughly what it says.
+ */
+const MARK_MAX_ENTRIES = 40;
+
+/** The nasab, laqab, kunya and town, reduced to the words worth testing. */
+function marksOf(candidate: Candidate): string[] {
+  const out = new Set<string>();
+  for (const field of candidate.marks ?? []) {
+    for (const word of normaliseKey(field ?? '').split(' ')) {
+      if (word.length >= MARK_MIN && !MARK_NOISE.has(word)) out.add(word);
+    }
+  }
+  return [...out];
+}
+
+/**
+ * Two entries answer the name equally well. Does the rest of the identity part
+ * them?
+ *
+ * A mark counts only if it is **exclusive** — carried by this entry and not by
+ * its rivals — and **rare** in the work. Sālim Sablān and Sālim ibn ʿAbd Allāh
+ * ibn ʿUmar are both `سالم بن عبد الله`, both of the third ṭabaqa, and both
+ * `المدني`; what separates them is that Taqrīb's 2177 also says `النصري`,
+ * `الدوسي` and `المهري`, and 2176 says none of the three. `المدني` is carried
+ * by both and decides nothing; it would decide nothing even if only one had it.
+ *
+ * Where two entries each carry something the other lacks, the evidence points
+ * both ways, and that is still two men of one name: nothing is returned.
+ */
+function discriminate(
+  tied: Alignment[],
+  marks: string[],
+  wordsOf: (entry: Biography) => Set<string>,
+  rare: (mark: string) => boolean,
+): Alignment | undefined {
+  const telling = marks.filter(rare);
+  if (!telling.length) return undefined;
+  const groups = [...new Map(tied.map((a) => [a.entry, a])).values()];
+  const carried = groups.map((a) => telling.filter((mark) => wordsOf(a.entry).has(mark)));
+
+  let winner: Alignment | undefined;
+  for (let i = 0; i < groups.length; i++) {
+    const exclusive = carried[i].some((mark) =>
+      carried.every((other, j) => j === i || !other.includes(mark)),
+    );
+    if (!exclusive) continue;
+    if (winner) return undefined;
+    winner = groups[i];
+  }
+  return winner;
+}
+
 function tabaqaOf(entry: Biography): number | undefined {
   const key = normaliseKey(entry.text);
   if (COMPANION_IN_ENTRY.test(key)) return 1;
@@ -157,7 +268,7 @@ function tabaqaOf(entry: Biography): number | undefined {
 
 function deathOf(entry: Biography): number | undefined {
   const hit = DEATH_IN_ENTRY.exec(entry.text);
-  return hit ? yearInWords(hit[1]) : undefined;
+  return hit ? yearInWords(hit[1].split(AGE_AFTER_DEATH)[0]) : undefined;
 }
 
 /**
@@ -182,10 +293,21 @@ export function alignAll(entries: Biography[], candidates: Candidate[]): Map<num
   const by = index(entries);
   const tabaqat = new Map<Biography, number | undefined>();
   const deaths = new Map<Biography, number | undefined>();
+  const words = new Map<Biography, Set<string>>();
   for (const entry of entries) {
     tabaqat.set(entry, tabaqaOf(entry));
     deaths.set(entry, deathOf(entry));
+    words.set(entry, new Set(normaliseKey(entry.text).split(' ')));
   }
+  const wordsOf = (entry: Biography) => words.get(entry) ?? new Set<string>();
+
+  // How many lives each word stands in, so a mark can be weighed by how much
+  // of the book it fails to describe.
+  const spread = new Map<string, number>();
+  for (const set of words.values()) {
+    for (const word of set) spread.set(word, (spread.get(word) ?? 0) + 1);
+  }
+  const rare = (mark: string) => (spread.get(mark) ?? 0) <= MARK_MAX_ENTRIES;
 
   const out = new Map<number, Alignment>();
   for (const candidate of candidates) {
@@ -250,10 +372,21 @@ export function alignAll(entries: Biography[], candidates: Candidate[]): Map<num
     // is al-Zuhrī and `محمد بن مسلم بن تدرس` is Abū al-Zubayr, and the first
     // three words of each are the same three words.
     possible.sort((a, b) => b.matched - a.matched);
-    const best = possible[0];
+    let best = possible[0];
 
-    // Two different entries answering equally well is two men of one name.
-    if (possible.some((a) => a.entry !== best.entry && a.matched === best.matched)) continue;
+    /*
+      Two different entries answering equally well is two men of one name —
+      unless the rest of the identity parts them. The name alone leaves 951 of
+      this corpus's narrators tied, and for many the tie is only in the first
+      few words: the nasab that would settle it is sitting in the entry,
+      unread.
+    */
+    const tied = possible.filter((a) => a.matched === best.matched);
+    if (tied.some((a) => a.entry !== best.entry)) {
+      const decided = discriminate(tied, marksOf(candidate), wordsOf, rare);
+      if (!decided) continue;
+      best = decided;
+    }
 
     // Nothing corroborates it: only a long, distinctive name is evidence enough.
     if (!best.tabaqaAgrees && !best.deathAgrees && best.matched < LONE_NAME_WORDS) continue;

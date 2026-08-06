@@ -395,6 +395,61 @@ test.describe('the controls', () => {
 
     await openable.first().locator('.verdict__toggle').click();
     await expect(page.locator('.verdict__text')).toHaveCount(0);
+
+    // A card that cannot open says which nothing it is. Only Taqrīb has been
+    // read, so every other work on him carries the other reason.
+    await expect(page.locator('.verdict__absent').first()).toHaveText('not yet read in full');
+    await page.locator('.detail__close').click();
+    await page.getByLabel('Find a narrator by name').fill('');
+  });
+
+  test('a work read through says so when it does not name him', async ({ app: page }) => {
+    await openSidebar(page);
+    // Maʿmar ibn Rāshid carries a Taqrīb verdict from the rijāl database, and
+    // no entry in Taqrīb could be pinned to him uniquely. That is a different
+    // fact from a work nobody has read, and the card has to tell them apart —
+    // otherwise a reader cannot distinguish either from a broken button.
+    await page.getByLabel('Find a narrator by name').fill('معمر بن راشد');
+    await page.locator('.rawi').first().click();
+    await expect(page.locator('.detail')).toBeVisible();
+
+    const taqrib = page.locator('.verdict', { hasText: 'Taqrīb al-Tahdhīb' }).first();
+    await expect(taqrib).toBeVisible();
+    await expect(taqrib.locator('.verdict__absent')).toHaveText('not identified in this work');
+    // And it is not a button: there is nothing to open.
+    await expect(taqrib.locator('.verdict__toggle')).toHaveCount(0);
+
+    await page.locator('.detail__close').click();
+    await page.getByLabel('Find a narrator by name').fill('');
+  });
+
+  test('a rebuilt corpus cannot be served from a stale cache', async ({ app: page }) => {
+    // Every artefact sits at a fixed path and an ingest rewrites it in place,
+    // so nothing about the URL tells a browser its copy is out of date. The
+    // lazy files carry the corpus stamp; the two loaded at boot revalidate.
+    await openSidebar(page);
+    await page.getByLabel('Find a narrator by name').fill('الزهري');
+    await page.locator('.rawi').first().click();
+    await expect(page.locator('.detail')).toBeVisible();
+    await expect(page.locator('.verdict--open').first()).toBeVisible();
+
+    // Asked of the page rather than watched for: this worker shares one page
+    // across the file, so the shard may have been fetched by an earlier test.
+    // The resource timeline remembers it either way.
+    const asked = await page.evaluate(() =>
+      performance.getEntriesByType('resource').map((entry) => entry.name),
+    );
+
+    const bio = asked.find((url) => url.includes('/narrators/bio-'));
+    expect(bio, 'a biography shard should have been fetched').toBeTruthy();
+    expect(bio).toContain('?v=');
+
+    // The manifest is the one that carries the stamp, so it cannot itself be
+    // fetched under one; it revalidates instead.
+    const manifest = asked.find((url) => url.includes('/data/manifest.json'));
+    expect(manifest, 'the manifest should have been fetched').toBeTruthy();
+    expect(manifest).not.toContain('?v=');
+
     await page.locator('.detail__close').click();
     await page.getByLabel('Find a narrator by name').fill('');
   });

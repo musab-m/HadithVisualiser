@@ -36,12 +36,21 @@ export function Verdict({ verdict }: { verdict: RijalVerdict }) {
         {/*
           Only where there is something behind it. A card that offers to open
           and then shows the phrase again is worse than one that never offered.
+
+          Where there is nothing behind it, the card says which nothing it is.
+          A work read through in which this man could not be picked out is a
+          different fact from a work nobody has read yet, and a card that is
+          simply inert leaves a reader to guess it is broken.
         */}
         {readable ? (
           <span className="verdict__more" aria-hidden>
             {open ? 'hide the entry' : 'read the entry'}
           </span>
-        ) : null}
+        ) : verdict.read ? (
+          <span className="verdict__absent">not identified in this work</span>
+        ) : (
+          <span className="verdict__absent">not yet read in full</span>
+        )}
       </div>
     </>
   );
