@@ -428,7 +428,7 @@ async function main(): Promise<void> {
   const works = readEntries(CACHE_DIR, db, used);
 
   console.log('\n  Rebuilding narrator registry …');
-  const { narratorCount, bioShards } = rebuildRegistry(DATA_DIR, manifest.books, db, kunya, normaliseKey, works);
+  const { narratorCount, bioShards, lateBand } = rebuildRegistry(DATA_DIR, manifest.books, db, kunya, normaliseKey, works);
 
   console.log('  Rebuilding search index …');
   const search = rebuildSearchIndex(DATA_DIR, manifest.books);
@@ -440,6 +440,7 @@ async function main(): Promise<void> {
   manifest.generatedAt = new Date().toISOString();
   manifest.narratorCount = narratorCount;
   manifest.bioShards = bioShards;
+  manifest.lateBand = lateBand;
   manifest.search = search;
   manifest.sources = SOURCES;
   writeJson(join(DATA_DIR, 'manifest.json'), manifest);

@@ -302,15 +302,36 @@ the ṭabaqa ordering, and death dates decide the rest. A chain that reaches the
 Prophet must end in a Companion, which alone rules out most namesakes.
 
 **3 — Place.** `tools/ingest/generations.ts` settles every narrator's
-generation once, for the whole corpus, from three sources in order of what can
+generation once, for the whole corpus, from four sources in order of what can
 be trusted for a given man: his own chains where there are enough of them, Ibn
 Ḥajar's ṭabaqa where they are thin, and the generations of the people either
 side of him where there is neither. The ṭabaqāt are calibrated against the
 chains rather than assumed — the twelve of the Taqrīb track chain depth
 closely — and act as a *floor*, since an elided link can only ever make a
-narrator look earlier than he was. Each narrator records which of the three
-placed him. Within a generation they are ranked by death year, so the seniors
-sit above the juniors.
+narrator look earlier than he was.
+
+The fourth source is when he died, and it overrules the other three where it
+flatly contradicts them. Chain depth is elapsed time only while each link is a
+man who heard the report from the man before him, and a compiler working out of
+earlier books breaks that: he cites the Companion and stops, so the chain reads
+two links deep for someone six centuries later. al-Nawawī (d. 676) came out of
+Riyāḍ al-Ṣāliḥīn standing among the Successors, Ibn Ḥajar (d. 852) out of
+Bulūgh al-Marām beside him, and the ṭabaqāt cannot correct it — the Taqrīb runs
+out around 250 AH, and everyone it fails to reach is exactly everyone this
+affects. So each generation is given a calendar landmark, learned the same way
+the ṭabaqa mapping is: the death years of the narrators its own chains placed.
+This corpus has them closing at 85, 140, 182, 247, 265 and 268 AH, about 42
+years apart, and a man who outlives his generation's landmark by a whole
+generation's span is moved down to the earliest one that can hold him — 84 of
+8,123, never in the other direction, since a death year is evidence someone
+lived on and never that he came early. Those past every landmark land in one
+band below the last generation, labelled *later than the chains reach* rather
+than numbered: the axis is depth of transmission, and a compiler who took a
+report from a book has no measured depth at all. That is why his chain is
+short.
+
+Each narrator records which of the four placed him. Within a generation they
+are ranked by death year, so the seniors sit above the juniors.
 
 ### Rulings on the hadiths themselves
 
