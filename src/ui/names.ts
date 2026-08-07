@@ -8,7 +8,7 @@
  * vary between editions — أ ا إ, ى ي, ة ه. It is what makes `عائشه` typed
  * quickly find `عَائِشَة`.
  *
- * `skeleton` is for the other direction. Only 84 of the 8,123 narrators carry
+ * `skeleton` is for the other direction. Only 78 of the 7,589 narrators carry
  * an English name — the compilers and a few famous kunyas — so `abu hurayra`
  * has to reach the Arabic itself, and the only thing a transliteration reliably
  * agrees on is the consonants. Hurayra, Huraira, Hurairah differ in every vowel
@@ -110,7 +110,7 @@ export function rankName(
  * Not the tier: a chain of consonants matched exactly against a narrator with
  * one hadith is a worse answer than the same consonants inside the name of one
  * with six thousand. `abu hurayra` reduces to `bhr`, which is exactly Abū Baḥr
- * (7 chains) and merely the start of Abū Hurayra (5,944) — and it means Abū
+ * (7 chains) and merely the start of Abū Hurayra (4,871) — and it means Abū
  * Hurayra. So weight leads and the tier is a penalty against it, sized to be
  * worth about a factor of ten in chains per step down.
  */

@@ -19,7 +19,7 @@ be the same answer for him.
 You can look at one hadith, a chapter, several collections, or everything at once —
 or search the text and see every chain that carries a given wording.
 
-![The whole corpus: 49,843 chains through 8,123 narrators](docs/overview.png)
+![The whole corpus: 42,469 chains through 7,589 narrators](docs/overview.png)
 
 | One narrator | Three chains |
 | --- | --- |
@@ -33,7 +33,7 @@ being transmitted; the shape answers how independent those routes were.
 
 ![Tracing a wording through the corpus](docs/trace-a-wording.png)
 
-`إنما الأعمال بالنيات` comes back as **21 reports across twelve collections** — five
+`إنما الأعمال بالنيات` comes back as **18 reports across nine collections** — five
 of them in al-Bukhari alone — and the picture shows why the hadith is called *gharīb*
 at its root: a single strand from ʿUmar down through four narrators before it fans
 out to every compiler.
@@ -44,8 +44,8 @@ changed (`بالنية` for `بالنيات`, one translator's phrasing for anot
 demanding every term would hide exactly the corroborations the question is about.
 Adjacent word pairs are indexed too, which is what floats the exact wording to the
 top, and lets the results be narrowed to the reports carrying the phrase itself
-rather than the words scattered through them — of the 21 hadiths matching those
-words, 17 carry them together.
+rather than the words scattered through them — of the 18 hadiths matching those
+words, 14 carry them together.
 
 The layout is built for a phone as well as a desktop: the panel becomes a sheet
 that opens from the top bar, so the graph is never fighting it for the screen.
@@ -60,8 +60,8 @@ rotating separates the chains that are hers from the ones passing nearby.
 
 It stacks. Isolate on a second narrator and only the chains carrying *both*
 survive, which answers a question the whole graph cannot: whether these two ever
-stood on the same isnad. ʿAbd al-Raḥmān b. Samura and Muʿādh b. Jabal, on 32 and
-several hundred chains respectively, share exactly one.
+stood on the same isnad. ʿAbd al-Raḥmān b. Samura and Muʿādh b. Jabal, on 26 and
+105 chains respectively, share exactly one.
 
 Isolation is a lens over whatever is already selected rather than a selection of
 its own, so it composes with the collections and the search: *these chains, for
@@ -81,12 +81,12 @@ It searches the whole register rather than what is drawn, because being told a
 man is in the corpus but not in the collections you have open is an answer and
 an empty list is not; results say which they are.
 
-Only 84 of the 8,123 narrators carry an English name — the compilers, and a few
+Only 78 of the 7,589 narrators carry an English name — the compilers, and a few
 famous kunyas — so a Latin query has to reach the Arabic itself. It does it
 through the consonants: `abu hurayra`, `أبو هريرة` and `Abū Hurayrah` all reduce
 to `bhr`, since vowels are the one thing no two transliterations agree on. What
 that costs is precision, so weight decides between the hits — `bhr` is *exactly*
-Abū Baḥr of seven chains and merely the start of Abū Hurayra of 5,944, and it
+Abū Baḥr of seven chains and merely the start of Abū Hurayra of 4,871, and it
 means Abū Hurayra.
 
 ## What the lines claim
@@ -95,17 +95,17 @@ A line between two narrators is a claim that one heard it from the other, so the
 graph draws one only where the isnad makes it.
 
 **A report that stops, stops.** The line to the apex is drawn where the chain
-runs into the Prophet ﷺ — 74.5% of the corpus. Where it does not but the report
+runs into the Prophet ﷺ — 71.6% of the corpus. Where it does not but the report
 names him anyway, the step is drawn **dashed**: the report is his and only this
-reading of the isnad fell short (11.4%). Where he is not named at all, **no line
-is drawn to him** (14.0%). That last case is what mawqūf and maqṭūʿ *are* — the
+reading of the isnad fell short (13.0%). Where he is not named at all, **no line
+is drawn to him** (15.4%). That last case is what mawqūf and maqṭūʿ *are* — the
 report stops at a Companion or a Follower — and the Muwaṭṭaʾ, half of which is
-āthār, shows it most: 966 of its 1,847 chains stand clear of the apex.
+āthār, shows it most: 973 of its 1,847 chains stand clear of the apex.
 
 **A narrator nobody could name is a jump, not a hearing.** Isnads routinely name
 someone only by relation — `عن أبيه`, `عن أخيه`, `عن مولاه` — and where no table
 turns that into a man the chain is one narrator longer than it looks. Those steps
-are recorded at ingest (3,204 of them, on 6.3% of chains) and drawn dashed, so the
+are recorded at ingest (3,181 of them, on 7.4% of chains) and drawn dashed, so the
 two ends are joined without claiming they met.
 
 A pair is only ever drawn dashed when *no* chain in the corpus attests it
@@ -122,7 +122,7 @@ screen — and names whatever it is holding while closed, so a filter can never 
 left on out of sight.
 
 **Al-Albānī's ruling** — sound, good, weak, denounced, fabricated — for the
-third of the corpus he ruled on. **The shape of the chain** — a senior narrating
+42% of the corpus he ruled on. **The shape of the chain** — a senior narrating
 from a junior (*riwāyat al-akābir ʿan al-aṣāghir*), transmission between
 contemporaries (*riwāyat al-aqrān*), a short chain (*isnād ʿālī*), a chain not
 traced to the Prophet — read straight off the chain, so these are exact: they
@@ -133,8 +133,8 @@ in the rijāl database records a sex, so this is read off how the literature nam
 people: `بنت`, an `أم` kunya, or ṣaḥābiyya said outright. The one trap is a man
 named through his mother — Yaʿlā ibn Umayya is also `يعلى بن منية بنت غزوان` — so
 the rule is not *does the name contain bint* but *does bint come before bin*,
-whichever names this person rather than a parent. That finds **209 women, on
-4,899 chains**; a woman named by neither marker would be missed, and the panel
+whichever names this person rather than a parent. That finds **197 women, on
+4,168 chains**; a woman named by neither marker would be missed, and the panel
 says so.
 
 Choices under one heading widen the result, choices under different headings
@@ -208,7 +208,7 @@ None of those are visible to a unit test of the functions involved.
 | `mobile.spec.ts` | the sheet, the long press, and the isolation bar's geometry on a 390px screen |
 
 Most tests start from a saved view holding one small collection, so the graph
-settles in a second rather than relaxing 49,843 chains; `loads.spec.ts` is the
+settles in a second rather than relaxing 42,469 chains; `loads.spec.ts` is the
 one that pays for the whole corpus. Timeouts are deliberately loose — CI has no
 GPU, WebGL falls back to software, and a tight limit fails on machine speed
 rather than on anything being wrong.
@@ -238,13 +238,13 @@ What the site actually costs to serve:
 
 | | gzipped |
 | --- | --- |
-| First load — app, narrator registry, all 16 book indexes | 1.6 MB |
-| A search query (fetches 2–3 index shards) | ~440 KB |
-| Opening a narrator's biography | ~105 KB |
-| Reading a hadith's text | ~150 KB |
-| Every byte, if one visitor fetched the whole corpus | 27 MB |
+| First load — app, narrator registry, all 11 book indexes | 1.7 MB |
+| A search query (fetches 2–3 index shards) | ~300 KB |
+| Opening a narrator's biography | ~130 KB |
+| Reading a hadith's text | ~120 KB |
+| Every byte, if one visitor fetched the whole corpus | 25 MB |
 
-245 files, 110 MB on disk, largest single file under 1 MB — inside the limits of
+209 files, 101 MB on disk, largest single file 1.1 MB — inside the limits of
 every major free static host, including Cloudflare's 20,000-file cap and GitHub's
 1 GB site limit.
 
@@ -264,14 +264,56 @@ npm run ingest -- --list
 ```
 
 ```
-  ● bukhari                Sahih al-Bukhari                  7261/7277 chains
+  ● bukhari                Sahih al-Bukhari                  7260/7277 chains
   ○ tirmidhi               Jami` at-Tirmidhi
   …
 ```
 
-Sixteen collections are wired up, including the nine canonical books. Ingest them
-one at a time; each writes its own directory and the narrator registry is rebuilt
-across whatever is present. Adding Muslim never re-parses Bukhari.
+Eleven collections are wired up: the nine canonical books, plus al-Bukhārī's
+*al-Adab al-Mufrad* and al-Tirmidhī's *al-Shamāʾil*. Ingest them one at a time;
+each writes its own directory and the narrator registry is rebuilt across
+whatever is present. Adding Muslim never re-parses Bukhari.
+
+### What is not here, and why
+
+Every collection in the catalogue **transmits**: each hadith carries the chain of
+people who passed it down, and that chain is the thing this project draws. Later
+anthologies quote those collections instead — *Mishkāt al-Maṣābīḥ*, *Riyāḍ
+al-Ṣāliḥīn*, *Bulūgh al-Marām*, the two Forties. They were ingested for a while
+and then taken out, and the measurements are worth keeping because they are the
+argument:
+
+| | median links | ≤2 links | reaches the Prophet | gaps marked |
+| --- | --- | --- | --- | --- |
+| the eleven here | 3–5 | 1–34% | 41–84% | 3–11% |
+| the five removed | 1 | 97–100% | 85–98% | **0%** |
+
+A chain of one link is a Companion and nothing else; both edges it implies are
+already in the corpus from the collections that do transmit. (The 34% is the
+*Muwaṭṭaʾ*, which is genuinely full of short and mursal chains — Mālik was two
+generations closer to the Companions than the rest, and it is the one collection
+here where a short chain is a fact about the transmission rather than about the
+citation.)
+
+And these books say as much themselves. Counting explicit attributions in their
+own Arabic, *Riyāḍ al-Ṣāliḥīn* names an earlier collection in 97% of its hadiths
+— al-Bukhārī and Muslim together, *muttafaq ʿalayh*, 730 times — and *Bulūgh
+al-Marām* in 86%. What they hand over is a citation of a book already ingested
+here.
+
+The last column is why they had to go rather than merely being redundant. They
+were the only collections in the corpus with **no gaps recorded at all**, and
+85–98% of them were marked as reaching the Prophet — the most complete-looking
+isnads in the whole graph, when in fact everything between the Companion and a
+compiler six centuries later was missing. The parser catches an elided link
+*inside* a chain; it had nothing to say about a chain elided all at once.
+
+Their matn is worth reading and the loss is real — 8,173 hadiths, and the topical
+arrangement that is the whole point of *Riyāḍ* and *Bulūgh*, which no *musnad* or
+*sunan* gives you. Only 2–10% of those texts closely match anything in the eleven,
+since they abridge and rework. Bringing them back means giving a citation an edge
+kind of its own first, so that "al-Nawawī reports that al-Bukhārī narrated" is
+drawn as the attribution it is and not as a hearing.
 
 ---
 
@@ -312,23 +354,28 @@ narrator look earlier than he was.
 
 The fourth source is when he died, and it overrules the other three where it
 flatly contradicts them. Chain depth is elapsed time only while each link is a
-man who heard the report from the man before him, and a compiler working out of
-earlier books breaks that: he cites the Companion and stops, so the chain reads
-two links deep for someone six centuries later. al-Nawawī (d. 676) came out of
-Riyāḍ al-Ṣāliḥīn standing among the Successors, Ibn Ḥajar (d. 852) out of
-Bulūgh al-Marām beside him, and the ṭabaqāt cannot correct it — the Taqrīb runs
-out around 250 AH, and everyone it fails to reach is exactly everyone this
-affects. So each generation is given a calendar landmark, learned the same way
-the ṭabaqa mapping is: the death years of the narrators its own chains placed.
-This corpus has them closing at 85, 140, 182, 247, 265 and 268 AH, about 42
-years apart, and a man who outlives his generation's landmark by a whole
-generation's span is moved down to the earliest one that can hold him — 84 of
-8,123, never in the other direction, since a death year is evidence someone
-lived on and never that he came early. Those past every landmark land in one
-band below the last generation, labelled *later than the chains reach* rather
-than numbered: the axis is depth of transmission, and a compiler who took a
-report from a book has no measured depth at all. That is why his chain is
-short.
+man who heard the report from the man before him, and the ṭabaqāt cannot patch
+it up where it fails: the twelve of the Taqrīb run out around 250 AH, so anyone
+later is beyond correcting by that route. So each generation is given a calendar
+landmark, learned the same way the ṭabaqa mapping is — the death years of the
+narrators its own chains placed. This corpus has them closing at 85, 140, 181,
+247, 265 and 268 AH, about 42 years apart, and a man who outlives his
+generation's landmark by a whole generation's span is moved down to the earliest
+one that can hold him: **74 of 7,589**, never in the other direction, since a
+death year is evidence someone lived on and never that he came early.
+
+Those past every landmark land in one band below the last generation, labelled
+*later than the chains reach* rather than numbered, because the axis is depth of
+transmission and a number there would assert a depth nothing measured. This is
+what caught the citation collections while they were still ingested — al-Nawawī
+(d. 676) had come out of *Riyāḍ al-Ṣāliḥīn* standing among the Successors, Ibn
+Ḥajar (d. 852) out of *Bulūgh al-Marām* beside him, on chains two links long.
+With those books out, the band holds 45 narrators over 118 appearances, and it
+has become something more useful than a home for late compilers: a chain says a
+man was transmitting in the second century, his biography says he died in the
+sixth, and both cannot be true. 28 of the 45 are already flagged as ambiguous
+identifications. The band is where that disagreement is visible rather than
+averaged away.
 
 Each narrator records which of the four placed him. Within a generation they
 are ranked by death year, so the seniors sit above the juniors.
@@ -439,7 +486,7 @@ to them.
 | [Itqan](https://github.com/R3GENESI5/Itqan) by Ali Bin Shahid | 115,735 narrator profiles consolidated from 22 classical works of ʿilm ar-rijāl; al-Albānī's per-hadith rulings on the four Sunan; the kinship and kunya lookup tables | Code MIT; data compiled from public-domain classical sources |
 
 Where a narrator could be matched to his entry in **Taqrīb al-Tahdhīb** with
-confidence — 5,446 of them — the assessment opens onto what Ibn Ḥajar actually
+confidence — 5,410 of them — the assessment opens onto what Ibn Ḥajar actually
 wrote, in Arabic, with the edition named beneath it. A card that cannot open
 says which of the two reasons it is: the work has not been read in full yet, or
 it was read and he could not be identified in it. The text is read from

@@ -1,6 +1,7 @@
 import { expect, test } from './fixtures';
 import {
   CHAPTER_BOOK_TITLE,
+  SMALL_BOOK,
   SMALL_BOOK_HADITHS,
   SMALL_BOOK_TITLE,
   openSidebar,
@@ -33,7 +34,7 @@ test.describe('the controls', () => {
 
   test('all and none select every collection and no collection', async ({ app: page }) => {
     // The one test that puts the whole corpus on screen. Without a GPU a click
-    // against 8,124 nodes takes tens of seconds, which is the machine rather
+    // against 7,590 nodes takes tens of seconds, which is the machine rather
     // than the site — so it is allowed to take its time, and it is the only
     // place that pays this.
     test.slow();
@@ -118,7 +119,7 @@ test.describe('the controls', () => {
   test('a hadith can be pinned by number and let go again', async ({ app: page }) => {
     await openSidebar(page);
 
-    await page.getByPlaceholder(/Hadith number/).fill('qudsi40 1');
+    await page.getByPlaceholder(/Hadith number/).fill(`${SMALL_BOOK} 1`);
     const result = page.locator('.picker__result').first();
     await expect(result).toBeVisible();
     await result.click();
@@ -341,7 +342,7 @@ test.describe('the controls', () => {
     await expect(results.first()).toBeVisible();
     await expect(results.first()).toContainText('عائشة');
 
-    // Only 84 of the 8,123 narrators carry an English name, so a Latin query
+    // Only 78 of the 7,589 narrators carry an English name, so a Latin query
     // has to reach the Arabic through the consonants both spellings share.
     await box.fill('abu hurayra');
     await expect(results.first()).toBeVisible();

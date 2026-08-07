@@ -4,6 +4,19 @@
  * Adding a collection is a matter of adding an entry here and running
  * `npm run ingest -- <slug>` — nothing else in the pipeline or the app is
  * book-specific.
+ *
+ * Every collection here transmits: each hadith carries the chain of people who
+ * passed it down, and that chain is what this project draws. Later anthologies
+ * that quote those collections rather than transmit from them — Mishkāt
+ * al-Maṣābīḥ, Riyāḍ al-Ṣāliḥīn, Bulūgh al-Marām, the two Forties — were
+ * ingested for a time and taken out again, because what they give is an
+ * attribution, not an isnad. Measured over the corpus they carried a median of
+ * one link where these carry five, named an earlier collection in their own
+ * text in 86–98% of entries, and still came out marked as complete chains
+ * reaching the Prophet with no gap recorded — the most authoritative-looking
+ * and least substantiated thing in the whole graph. Their matn is worth
+ * reading; their chain is a citation of a book already ingested here. If they
+ * come back, they need an edge kind of their own first.
  */
 
 export interface BookDefinition {
@@ -132,42 +145,6 @@ export const BOOKS: BookDefinition[] = [
     path: 'db/by_book/the_9_books/ahmed.json',
   },
   {
-    slug: 'nawawi40',
-    titleEn: 'The Forty Hadith of al-Nawawi',
-    titleAr: 'الأربعون النووية',
-    authorEn: 'Yaḥyā ibn Sharaf al-Nawawī',
-    authorAr: 'يحيى بن شرف النووي',
-    authorDiedAH: 676,
-    path: 'db/by_book/forties/nawawi40.json',
-  },
-  {
-    slug: 'qudsi40',
-    titleEn: 'The Forty Hadith Qudsi',
-    titleAr: 'الأربعون القدسية',
-    authorEn: 'Compiled tradition',
-    authorAr: 'الأربعون القدسية',
-    authorDiedAH: 0,
-    path: 'db/by_book/forties/qudsi40.json',
-  },
-  {
-    slug: 'riyad_assalihin',
-    titleEn: 'Riyad as-Salihin',
-    titleAr: 'رياض الصالحين',
-    authorEn: 'Yaḥyā ibn Sharaf al-Nawawī',
-    authorAr: 'يحيى بن شرف النووي',
-    authorDiedAH: 676,
-    path: 'db/by_book/other_books/riyad_assalihin.json',
-  },
-  {
-    slug: 'bulugh_almaram',
-    titleEn: 'Bulugh al-Maram',
-    titleAr: 'بلوغ المرام',
-    authorEn: 'Ibn Ḥajar al-ʿAsqalānī',
-    authorAr: 'ابن حجر العسقلاني',
-    authorDiedAH: 852,
-    path: 'db/by_book/other_books/bulugh_almaram.json',
-  },
-  {
     slug: 'aladab_almufrad',
     titleEn: 'Al-Adab Al-Mufrad',
     titleAr: 'الأدب المفرد',
@@ -184,15 +161,6 @@ export const BOOKS: BookDefinition[] = [
     authorAr: 'أبو عيسى الترمذي',
     authorDiedAH: 279,
     path: 'db/by_book/other_books/shamail_muhammadiyah.json',
-  },
-  {
-    slug: 'mishkat_almasabih',
-    titleEn: 'Mishkat al-Masabih',
-    titleAr: 'مشكاة المصابيح',
-    authorEn: 'al-Khaṭīb al-Tabrīzī',
-    authorAr: 'الخطيب التبريزي',
-    authorDiedAH: 741,
-    path: 'db/by_book/other_books/mishkat_almasabih.json',
   },
 ];
 

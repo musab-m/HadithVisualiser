@@ -4,7 +4,7 @@ import { collectErrors, openSidebar, ready, stats, trace } from './helpers';
 
 /**
  * The site is static, so "does it load" means the whole corpus loads: a
- * manifest, sixteen book indexes and a narrator registry, all fetched with
+ * manifest, eleven book indexes and a narrator registry, all fetched with
  * relative paths that a base-path mistake would quietly break.
  *
  * This is the only file that opens with nothing saved, so it is also the only
