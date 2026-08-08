@@ -3,17 +3,21 @@ import { expect, type Locator, type Page } from '@playwright/test';
 /**
  * A collection small enough that the graph settles in a second or two. Most
  * tests are about whether a control does what it says, not about scale, and
- * running each of them against 49,843 chains would make the suite unusable.
+ * running each of them against 42,469 chains would make the suite unusable.
  */
-export const SMALL_BOOK = 'qudsi40';
+export const SMALL_BOOK = 'shamail_muhammadiyah';
 
-/** Listed in the sidebar as "The Forty Hadith Qudsi". */
-export const SMALL_BOOK_TITLE = 'The Forty Hadith Qudsi';
-export const SMALL_BOOK_HADITHS = 40;
+/** Listed in the sidebar as "Shamail al-Muhammadiyah". */
+export const SMALL_BOOK_TITLE = 'Shamail al-Muhammadiyah';
+export const SMALL_BOOK_HADITHS = 402;
 
-/** The smallest collection that is divided into chapters — 402 across 57. */
-export const CHAPTER_BOOK = 'shamail_muhammadiyah';
-export const CHAPTER_BOOK_TITLE = 'Shamail al-Muhammadiyah';
+/**
+ * A second small collection, for the tests that add one to another. It has to
+ * be a different book from `SMALL_BOOK` — those tests click it on top of the
+ * starting selection, and the same title would toggle that one off instead.
+ */
+export const CHAPTER_BOOK = 'aladab_almufrad';
+export const CHAPTER_BOOK_TITLE = 'Al-Adab Al-Mufrad';
 
 /**
  * Errors the page logged. Attach before navigating.

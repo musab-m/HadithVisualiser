@@ -1,14 +1,14 @@
 import { test as base, devices, expect, type Page } from '@playwright/test';
-import { SMALL_BOOK_HADITHS, SMALL_BOOK_TITLE, ready, settled } from './helpers';
+import { SMALL_BOOK, SMALL_BOOK_HADITHS, SMALL_BOOK_TITLE, ready, settled } from './helpers';
 
 /**
  * A page that outlives the test using it.
  *
  * Booting this site costs about fifteen seconds before a test can do anything,
  * and almost none of that is the corpus: the network is ~100ms and parsing all
- * sixteen book indexes is under 80ms. It is the app coming up and WebGL being
+ * eleven book indexes is under 60ms. It is the app coming up and WebGL being
  * set up in software, which a runner without a GPU pays in full. That cost is
- * the same whether the graph holds forty chains or fifty thousand, so it does
+ * the same whether the graph holds four hundred chains or forty thousand, so it does
  * not shrink by testing less — it only shrinks by paying it fewer times.
  *
  * So the page is created once per worker and handed to every test that can work
@@ -55,7 +55,7 @@ export { expect };
 /** The state every shared test starts from. */
 const CLEAN = {
   v: 2,
-  books: ['qudsi40'],
+  books: [SMALL_BOOK],
   chapters: [],
   pinned: [],
   query: '',

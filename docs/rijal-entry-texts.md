@@ -55,7 +55,7 @@ The work is not the fetching. It is:
 
 1. **Segmenting** each work into entries. OpenITI texts are mARkdown; entry
    boundaries are a per-work convention, not a schema.
-2. **Aligning** entries to the 8,123 narrators in this corpus by name — the same
+2. **Aligning** entries to the 7,589 narrators in this corpus by name — the same
    problem the chain resolver already solves, with the same trap. `الزهري` is
    one name and several men.
 
@@ -121,8 +121,8 @@ right entry.
 
 | | |
 | ---: | --- |
-| **5,446 of 7,410** | narrators in the corpus matched to an entry (73.5%) |
-| **83.5%** | of narrator *appearances* covered — the busy ones match best |
+| **5,410 of 7,297** | narrators in the corpus matched to an entry (74.1%) |
+| **83.9%** | of narrator *appearances* covered — the busy ones match best |
 | **95.1%** | of matches corroborated by the ṭabaqa or the death year the entry itself states |
 | **96.9%** | agree with the entry Itqan cites, where Itqan cites one |
 
@@ -133,6 +133,13 @@ Each rule was measured on its own before it was kept:
 | name, ṭabaqa and death alone | 5,192 | 77.1% | 97.0% |
 | + the two year-reading fixes | 5,295 | 81.5% | 97.0% |
 | + tie-breaking on the identity | **5,446** | **83.5%** | 96.9% |
+
+That table, and the two agreement figures above it, were measured while the
+corpus still held the five citation collections — 8,123 narrators rather than
+7,589. They are properties of the alignment rule rather than of the book list,
+and re-running the discarded variants to restate them would prove nothing the
+rule has not already been kept for. The headline row is restated above against
+the corpus as it now stands.
 
 The tie-breaker was tried twice and rejected once. Counting any exclusive mark
 added 261 matches and several plainly wrong ones: `عبد الملك بن عمير`, 191
@@ -164,10 +171,11 @@ The text is fetched at ingest into `.cache/works/` beside the other sources,
 aligned over only the profiles this corpus uses, and hung on the verdict for the
 work it came from. It lands on the bio shard, which is already fetched only when
 a narrator is opened, so the corpus a reader downloads to look at the graph is
-unchanged; the shards grew from 13 MB to 15 MB for the readers who do open one.
+unchanged; the shards grew from 13 MB to 15 MB for the readers who do open one (14 MB
+since the citation collections came out).
 
-**5,446 narrators carry an entry.** For 3,265 it enriches a card that was already
-there; for **2,181 the entry is the whole card** — Ibn Ḥajar has a life of him
+**5,410 narrators carry an entry.** For 3,243 it enriches a card that was already
+there; for **2,167 the entry is the whole card** — Ibn Ḥajar has a life of him
 and Itqan extracted no verdict from it. Binding the text to the verdicts alone
 would have thrown those away for want of a row to sit in.
 

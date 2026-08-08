@@ -122,7 +122,7 @@ fresh.describe('narrowing to a narrator', () => {
 
   fresh('a stored view from an older schema is ignored', async ({ page }) => {
     await page.addInitScript(() => {
-      localStorage.setItem('isnad:view', JSON.stringify({ v: 0, books: ['qudsi40'] }));
+      localStorage.setItem('isnad:view', JSON.stringify({ v: 0, books: ['a_book_from_before'] }));
     });
     await page.goto('/');
     await ready(page);

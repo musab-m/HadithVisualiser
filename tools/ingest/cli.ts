@@ -27,7 +27,7 @@ import {
   type TextChunkFile,
 } from '../../src/corpus/types.js';
 import { BOOKS, HADITH_JSON_BASE, HADITH_JSON_TAG, ITQAN_BASE, findBook, type BookDefinition } from './books.js';
-import { writeJson } from './emit.js';
+import { pruneShards, writeJson } from './emit.js';
 import { fetchJson, mapLimit, type FetchOptions } from './fetch.js';
 import { normaliseKey, stripDiacritics } from './isnad/arabic.js';
 import { loadKunyaMap, loadRelativeMaps } from './isnad/maps.js';
@@ -171,6 +171,9 @@ async function ingestBook(
     const file: TextChunkFile = { formatVersion: CORPUS_FORMAT_VERSION, chunk, texts: chunkTexts };
     bytes += writeJson(join(DATA_DIR, dir, `text-${chunk}.json`), file);
   });
+  // A collection that comes back shorter than it was leaves its last chunks
+  // behind otherwise.
+  pruneShards(join(DATA_DIR, dir), 'text-', texts.length);
 
   const summary: BookSummary = {
     slug: book.slug,

@@ -219,14 +219,10 @@ export function assignGenerations(input: GenerationInput): GenerationResult {
 
   // --- let the death dates correct what the chains cannot -------------------
   // Everything above reads chain depth as elapsed time, which it is only while
-  // each link is a man who heard the report from the man before him. A compiler
-  // working from earlier books breaks that: he cites the Companion and stops,
-  // and the chain reads two deep for someone six centuries later. al-Nawawī
-  // (d. 676) comes out of Riyāḍ al-Ṣāliḥīn standing among the Successors, and
-  // Ibn Ḥajar (d. 852) out of Bulūgh al-Marām beside him.
-  //
-  // The ṭabaqāt cannot correct it. The twelve of the Taqrīb run out around
-  // 250 AH, and everyone they fail to reach is exactly everyone this affects.
+  // each link is a man who heard the report from the man before him. Where that
+  // stops being true the chains are not merely thin, they are confidently
+  // wrong, and the ṭabaqāt cannot correct them: the twelve of the Taqrīb run
+  // out around 250 AH, so anyone later is past the reach of that route too.
   //
   // Death years can, and they are already here. So each generation is given a
   // calendar landmark, learned the way the ṭabaqa mapping was — from the death
@@ -234,6 +230,14 @@ export function assignGenerations(input: GenerationInput): GenerationResult {
   // generation's by a full generation's span is moved down to the earliest one
   // that can hold him. Only ever down: a death year is evidence someone lived
   // on, never that he came earlier than his chains say.
+  //
+  // This was written for the citation collections, where a compiler quoted an
+  // earlier book rather than a teacher and so came out two links from the
+  // Prophet six centuries after him; those are out of the catalogue now, and
+  // what it catches in the transmitting collections is the other case — a name
+  // resolved to the wrong man. A chain putting someone in the second century
+  // against a biography saying he died in the sixth is one or the other, and
+  // this is where that shows.
   const deaths = new Map<number, number[]>();
   for (const [id, value] of gen) {
     if (source.get(id) !== 'chains') continue;
@@ -267,9 +271,9 @@ export function assignGenerations(input: GenerationInput): GenerationResult {
 
   // One band past every generation the chains produced, so nobody the chains
   // did measure is standing in it. It is not a claim that transmission ran that
-  // many links deep — the axis is depth of transmission, and a compiler who
-  // took a report from a book has no measured depth at all. That is why his
-  // chain is short. The band is where those people go.
+  // many links deep — the axis is depth of transmission, and these are the
+  // people nothing in the corpus measured a depth for. Numbering the band would
+  // assert the very thing that is missing, so the app labels it instead.
   let deepest = 0;
   for (const value of gen.values()) if (value > deepest) deepest = value;
   const lateBand = deepest + 1;

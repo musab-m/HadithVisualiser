@@ -91,8 +91,8 @@ function Framing({
 function Generations({ bands }: { bands: LayoutBand[] }) {
   const width = useThree((state) => state.size.width);
   // The bottom band is not a generation and must not be numbered as one: it
-  // holds the compilers whose chains quote a book instead of a teacher, placed
-  // by when they died because nothing else in the corpus reaches them.
+  // holds the people whose death year and whose chains cannot both be right,
+  // placed by the year because nothing measured a depth for them.
   const lateBand = useStore((s) => s.manifest?.lateBand);
   const rings = useMemo(() => {
     const segments = 96;

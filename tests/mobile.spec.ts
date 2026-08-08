@@ -45,7 +45,7 @@ test.describe('on a phone', () => {
   test('choosing a hadith closes the sheet so the chain is visible', async ({ app: page }) => {
     await page.locator('.topbar__toggle').click();
 
-    await page.getByPlaceholder(/Hadith number/).fill('qudsi40 1');
+    await page.getByPlaceholder(/Hadith number/).fill(`${SMALL_BOOK} 1`);
     await page.locator('.picker__result').first().click();
     await settled(page);
 

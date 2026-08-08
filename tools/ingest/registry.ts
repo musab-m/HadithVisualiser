@@ -30,7 +30,7 @@ import { RIJAL_WORKS } from './rijal/sources.js';
 import { assignGenerations, type GenerationResult } from './generations.js';
 import type { KunyaEntry } from './isnad/maps.js';
 import type { RijalDatabase } from './rijal/db.js';
-import { writeJson } from './emit.js';
+import { pruneShards, writeJson } from './emit.js';
 
 /** One bio shard per ~400 narrators, so an open never pulls more than a page. */
 function shardCount(narrators: number): number {
@@ -193,6 +193,8 @@ export function rebuildRegistry(
   for (const shard of bios) {
     writeJson(join(dataDir, 'narrators', `bio-${shard.shard}.json`), shard);
   }
+  const stale = pruneShards(join(dataDir, 'narrators'), 'bio-', shards);
+  if (stale) console.log(`  dropped ${stale} bio ${stale === 1 ? 'shard' : 'shards'} the corpus no longer fills`);
 
   return { narratorCount: index.length, bioShards: shards, lateBand: generations.lateBand };
 }

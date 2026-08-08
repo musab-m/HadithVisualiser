@@ -7,7 +7,7 @@ import { Verdict } from './Verdict';
 /**
  * The name, without the disagreement about it.
  *
- * 351 of the 8,123 records carry the rijāl literature's apparatus inside the
+ * 360 of the 7,589 records carry the rijāl literature's apparatus inside the
  * full name — `عبد الرحمن بن صخر ، وقيل : عبد الرحمن بن غنم ، وقيل : …`, which
  * for Abū Hurayra runs to fourteen alternatives and fills a phone screen before
  * a word of biography. The heading takes the reading up to the first `وقيل`;
@@ -111,10 +111,10 @@ export function NarratorPanel() {
               value={bio?.gradeAr}
             />
             {/*
-              The last band is not a generation and is not numbered as one. A
-              compiler who took his reports out of earlier books has no measured
-              depth of transmission at all, and printing "generation 8" for him
-              would be inventing the number the chains failed to supply.
+              The last band is not a generation and is not numbered as one.
+              Nothing in the corpus measured a depth of transmission for the men
+              in it, so printing "generation 8" would invent the number the
+              chains failed to supply.
              */}
             <Row
               label="Generation"

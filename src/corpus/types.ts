@@ -55,9 +55,9 @@ export interface CorpusManifest {
   bioShards: number;
   /**
    * The generation band past every one the chains produced. It holds the people
-   * the chains stop short of — compilers who quoted an earlier book rather than
-   * a teacher, and so have no measured depth of transmission at all — and is
-   * labelled as such rather than as one more generation.
+   * whose death year cannot be reconciled with where their chains put them, and
+   * is labelled as such rather than numbered — nothing measured a depth of
+   * transmission for them, so a number would assert what is missing.
    */
   lateBand?: number;
   /** Full-text index, absent until the index has been built. */
