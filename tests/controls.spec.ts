@@ -67,31 +67,20 @@ test.describe('the controls', () => {
     await expect(page.locator('.book--on')).toHaveCount(2);
   });
 
-  /**
-   * Three relaxations of 1,903 narrators — the second collection goes on, a
-   * chapter narrows it, the whole book comes back — each rendered in software
-   * on a runner without a GPU. It ran inside the ordinary budget when the two
-   * smallest collections were 40 chains and 402; the smallest two are now 402
-   * and 1,316, so the same three steps cost four times what they did, and they
-   * land near the limit alone and over it when the desktop and the phone reach
-   * this test at the same moment.
-   *
-   * Declared here rather than through `test.slow()` in the body, which is what
-   * the whole-corpus test above can afford to use. That call only runs once the
-   * body does, and the body is reached only after the shared page has been
-   * reset — a reset that falls back to reloading the site, which on the phone
-   * spent the whole 180s on its own and timed out before the call extending it
-   * was ever made.
-   */
-  test('chapters narrow a collection and release it again', { timeout: 540_000 }, async ({ app: page }) => {
+  test('chapters narrow a collection and release it again', async ({ app: page }) => {
     await openSidebar(page);
-    await page.locator('.books').getByText(CHAPTER_BOOK_TITLE).click();
-    await settled(page);
     const whole = await stats(page);
 
-    // Every collection offers a chapter list, so the row has to be named or
-    // the locator matches fourteen buttons.
-    const row = page.locator('.book', { hasText: CHAPTER_BOOK_TITLE });
+    // Narrowed on the collection already open, which needs no second book on
+    // screen. It used to add one, because back when the small collection was
+    // forty hadiths qudsi there was nothing to narrow — that collection is
+    // gone, and the one that replaced it has 57 chapters of its own. Adding a
+    // second was costing three relaxations of 1,903 narrators, rendered in
+    // software on a runner with no GPU, for a question about one collection:
+    // it ran to 3.1 minutes and timed out whenever the desktop and the phone
+    // reached it together. Every collection offers a chapter list, so the row
+    // has to be named or the locator matches eleven buttons.
+    const row = page.locator('.book', { hasText: SMALL_BOOK_TITLE });
     await row.getByRole('button', { name: /\d+ chapters/ }).click();
     const chapters = page.locator('.chapters__list li');
     await expect(chapters.first()).toBeVisible();
