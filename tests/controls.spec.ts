@@ -68,6 +68,14 @@ test.describe('the controls', () => {
   });
 
   test('chapters narrow a collection and release it again', async ({ app: page }) => {
+    // Three relaxations of 1,903 narrators — the second collection goes on, a
+    // chapter narrows it, the whole book comes back — and on a runner without
+    // a GPU each of those is rendered in software. It ran inside the ordinary
+    // budget when the two smallest collections were 40 chains and 402; the
+    // smallest two are now 402 and 1,316, so the same three steps cost four
+    // times what they did and land near the limit alone and over it when the
+    // desktop and the phone reach this test at the same moment.
+    test.slow();
     await openSidebar(page);
     await page.locator('.books').getByText(CHAPTER_BOOK_TITLE).click();
     await settled(page);
