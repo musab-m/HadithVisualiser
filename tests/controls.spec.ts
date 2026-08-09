@@ -69,13 +69,18 @@ test.describe('the controls', () => {
 
   test('chapters narrow a collection and release it again', async ({ app: page }) => {
     await openSidebar(page);
-    await page.locator('.books').getByText(CHAPTER_BOOK_TITLE).click();
-    await settled(page);
     const whole = await stats(page);
 
-    // Every collection offers a chapter list, so the row has to be named or
-    // the locator matches fourteen buttons.
-    const row = page.locator('.book', { hasText: CHAPTER_BOOK_TITLE });
+    // Narrowed on the collection already open, which needs no second book on
+    // screen. It used to add one, because back when the small collection was
+    // forty hadiths qudsi there was nothing to narrow — that collection is
+    // gone, and the one that replaced it has 57 chapters of its own. Adding a
+    // second was costing three relaxations of 1,903 narrators, rendered in
+    // software on a runner with no GPU, for a question about one collection:
+    // it ran to 3.1 minutes and timed out whenever the desktop and the phone
+    // reached it together. Every collection offers a chapter list, so the row
+    // has to be named or the locator matches eleven buttons.
+    const row = page.locator('.book', { hasText: SMALL_BOOK_TITLE });
     await row.getByRole('button', { name: /\d+ chapters/ }).click();
     const chapters = page.locator('.chapters__list li');
     await expect(chapters.first()).toBeVisible();

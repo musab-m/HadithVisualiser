@@ -95,7 +95,7 @@ function layout(request: LayoutRequest): LayoutResponse {
     // need room for three Arabic labels side by side, not just three dots.
     const radius = 18 + Math.sqrt(members.length) * 5;
     layerRadius[g] = radius;
-    members.forEach((node, i) => {
+    seating(members, weight).forEach((node, i) => {
       const t = members.length === 1 ? 0 : Math.sqrt((i + 0.5) / members.length);
       const angle = i * GOLDEN_ANGLE;
       positions[node * 3] = Math.cos(angle) * t * radius;
@@ -198,14 +198,33 @@ function layout(request: LayoutRequest): LayoutResponse {
 
       separate(members, positions, target, bulk);
 
+      // Centre the layer on its ink rather than on its headcount.
+      //
+      // Counting heads pins the average *position* to the axis and says
+      // nothing about where the weight ended up. A layer satisfies it
+      // perfectly with its forty busiest narrators gathered to one side and a
+      // few hundred quiet ones spread over the other, which is what it was
+      // doing: 63% of the drawn area on one side of generation 2, against a
+      // headcount of 54%. The eye reads the ink.
+      //
+      // A translation can only zero one of the two, so this is a choice and
+      // not a fix: balancing the area unbalances the count, to 66/34. That
+      // side holds fewer, larger nodes over the same area and the same
+      // brightness, which reads as a difference in texture rather than one in
+      // density. The residue is the hubs still drawing together — springs
+      // gather what shares chains, and that much is the graph rather than the
+      // layout.
       let cx = 0;
       let cz = 0;
+      let mass = 0;
       for (const node of members) {
-        cx += positions[node * 3];
-        cz += positions[node * 3 + 2];
+        const area = bulk[node] * bulk[node];
+        cx += positions[node * 3] * area;
+        cz += positions[node * 3 + 2] * area;
+        mass += area;
       }
-      cx /= members.length || 1;
-      cz /= members.length || 1;
+      cx /= mass || 1;
+      cz /= mass || 1;
       for (const node of members) {
         positions[node * 3] -= cx;
         positions[node * 3 + 2] -= cz;
@@ -250,6 +269,65 @@ function layout(request: LayoutRequest): LayoutResponse {
   }
 
   return { token, positions, radius, height, spacing, bands };
+}
+
+/**
+ * Which seat on the spiral each member of a layer takes.
+ *
+ * It must not be the order they arrive in. The spiral seats the *i*th node at
+ * radius √(i/n), and members arrive in node order, which is registry order,
+ * which is sorted by how many chains a narrator carries — so seat 0, the dead
+ * centre of the disc, went to the busiest man in the generation and the rim
+ * went to the quietest. The separation pass then gives a big node more room
+ * than a small one, which left the middle of every layer over-subscribed by
+ * precisely the nodes least able to fit into it. It expanded as one body, and
+ * because nothing held that body to the axis it drifted off to one side and
+ * stayed there. Generation 2 came out with its busiest forty at mean radius
+ * 140 and its quietest four hundred at 106 — the big nodes ringing a core of
+ * small ones, the reverse of where they started and no more meaningful.
+ *
+ * A shuffle breaks the gradient, but leaves each band of radius with whatever
+ * mix chance deals it. Ranking the members by the room they will claim and
+ * then walking the seats in golden-ratio strides spreads consecutive ranks as
+ * far apart as the disc allows, so every band gets the same mix: the same
+ * generation now finishes at 118 and 120, which is no radial sorting at all.
+ * The stride is made coprime with the layer so it visits every seat exactly
+ * once, and nothing here varies between runs — the same selection has to lay
+ * out the same way every time it is drawn, or the graph would rearrange itself
+ * under the reader on a redraw.
+ */
+function seating(members: number[], weight: Float32Array): number[] {
+  const n = members.length;
+  if (n < 3) return members;
+
+  const ranked = [...members].sort((a, b) => weight[b] - weight[a]);
+
+  // The nearest stride to n/φ that is coprime with n, searched both ways: walk
+  // down only and a layer of four finds nothing before reaching 1, which is
+  // the identity and hands the middle back to the busiest nodes.
+  const ideal = Math.round(n / 1.618033988749895);
+  let stride = 1;
+  for (let step = 0; step < n; step++) {
+    const below = ideal - step;
+    const above = ideal + step;
+    if (below > 1 && gcd(below, n) === 1) {
+      stride = below;
+      break;
+    }
+    if (above < n && gcd(above, n) === 1) {
+      stride = above;
+      break;
+    }
+  }
+
+  const seated = new Array<number>(n);
+  for (let rank = 0; rank < n; rank++) seated[(rank * stride) % n] = ranked[rank];
+  return seated;
+}
+
+function gcd(a: number, b: number): number {
+  while (b) [a, b] = [b, a % b];
+  return a;
 }
 
 /**
